@@ -28,6 +28,7 @@ import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
+import uws.job.serializer.XMLSerializer;
 import uws.job.user.JobOwner;
 import uws.service.UWS;
 import uws.service.UWSUrl;
@@ -36,7 +37,7 @@ import uws.service.UWSUrl;
  * Useful conversion functions from UWS to JSON.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (06/2015)
+ * @version 4.2 (10/2015)
  */
 public final class Json4Uws {
 
@@ -54,6 +55,7 @@ public final class Json4Uws {
 		JSONObject json = new JSONObject();
 		if (uws != null){
 			json.put("name", uws.getName());
+			json.put("version", XMLSerializer.UWS_VERSION);
 			json.put("description", uws.getDescription());
 
 			JSONArray jobLists = new JSONArray();
@@ -82,7 +84,7 @@ public final class Json4Uws {
 	public final static JSONObject getJson(final JobList jobsList, final JobOwner owner) throws JSONException{
 		return getJson(jobsList, owner, null);
 	}
-	
+
 	/**
 	 * Gets the JSON representation of the given jobs list by filtering by owner and execution phase.
 	 * @param jobsList			The jobs list to represent in JSON.
@@ -99,12 +101,13 @@ public final class Json4Uws {
 		JSONObject json = new JSONObject();
 		if (jobsList != null){
 			json.put("name", jobsList.getName());
+			json.put("version", XMLSerializer.UWS_VERSION);
 			JSONArray jsonJobs = new JSONArray();
 			UWSUrl jobsListUrl = jobsList.getUrl();
-			UWSJob job= null;
-			
+			UWSJob job = null;
+
 			// No phase filter:
-			if (phaseFilters == null || phaseFilters.length ==0){
+			if (phaseFilters == null || phaseFilters.length == 0){
 				Iterator<UWSJob> it = jobsList.getJobs(owner);
 				JSONObject jsonObj = null;
 				while(it.hasNext()){
@@ -125,7 +128,7 @@ public final class Json4Uws {
 				while(it.hasNext()){
 					job = it.next();
 					toDisplay = (phaseFilters.length < 0);
-					for(p=0; !toDisplay && p<phaseFilters.length; p++)
+					for(p = 0; !toDisplay && p < phaseFilters.length; p++)
 						toDisplay = (job.getPhase() == phaseFilters[p]);
 					if (toDisplay){
 						jsonObj = getJson(job, jobsListUrl, true);
@@ -161,6 +164,7 @@ public final class Json4Uws {
 	public final static JSONObject getJson(final UWSJob job, final UWSUrl jobsListUrl, final boolean reference) throws JSONException{
 		JSONObject json = new JSONObject();
 		if (job != null){
+			json.put("version", XMLSerializer.UWS_VERSION);
 			json.put(UWSJob.PARAM_JOB_ID, job.getJobId());
 			json.put(UWSJob.PARAM_PHASE, job.getPhase());
 			if (reference){
@@ -249,7 +253,7 @@ public final class Json4Uws {
 			resultJson.put("id", r.getId());
 			resultJson.put("type", r.getType());
 			resultJson.put("href", r.getHref());
-			resultJson.put("mime", r.getMimeType());
+			resultJson.put("mime-type", r.getMimeType());
 			if (r.getSize() >= 0)
 				resultJson.put("size", r.getSize());
 			resultJson.put("redirection", r.isRedirectionRequired());
