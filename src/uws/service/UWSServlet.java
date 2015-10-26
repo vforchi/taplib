@@ -57,6 +57,7 @@ import uws.job.parameters.UWSParameters;
 import uws.job.serializer.JSONSerializer;
 import uws.job.serializer.UWSSerializer;
 import uws.job.serializer.XMLSerializer;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.actions.JobSummary;
 import uws.service.actions.UWSAction;
@@ -134,7 +135,7 @@ import uws.service.wait.BlockingPolicy;
  * </p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (06/2015)
+ * @version 4.2 (10/2015)
  */
 public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory {
 	private static final long serialVersionUID = 1L;
@@ -181,7 +182,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 
 	/** Lets writing/formatting any exception/throwable in a HttpServletResponse. */
 	protected ServiceErrorWriter errorWriter;
-	
+
 	/** 
 	 * <p>Strategy to use for the blocking/wait process concerning the
 	 * {@link #doJobSummary(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)} action.</p>
@@ -459,7 +460,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 			UWSToolBox.deleteUploads(req);
 		}
 	}
-	
+
 	/* ***************** */
 	/* BLOCKING BEHAVIOR */
 	/* ***************** */
@@ -474,7 +475,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * 
 	 * @since 4.2
 	 */
-	public final BlockingPolicy getWaitPolicy() {
+	public final BlockingPolicy getWaitPolicy(){
 		return waitPolicy;
 	}
 
@@ -490,7 +491,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * 
 	 * @since 4.2
 	 */
-	public final void setWaitPolicy(final BlockingPolicy waitPolicy) {
+	public final void setWaitPolicy(final BlockingPolicy waitPolicy){
 		this.waitPolicy = waitPolicy;
 	}
 
@@ -521,12 +522,12 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	protected void doListJob(UWSUrl requestUrl, HttpServletRequest req, HttpServletResponse resp, JobOwner user) throws UWSException, ServletException, IOException{
 		// Get the jobs list:
 		JobList jobsList = getJobList(requestUrl.getJobListName());
-		
+
 		// Write the jobs list:
 		UWSSerializer serializer = getSerializer(req.getHeader("Accept"));
 		resp.setContentType(serializer.getMimeType());
 		try{
-			jobsList.serialize(resp.getOutputStream(), serializer, user, UWSToolBox.getPhaseFilters(req));
+			jobsList.serialize(resp.getOutputStream(), serializer, user, new JobListFilter(req));
 		}catch(Exception e){
 			e.printStackTrace();
 			if (!(e instanceof UWSException)){
@@ -593,7 +594,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	protected void doJobSummary(UWSUrl requestUrl, HttpServletRequest req, HttpServletResponse resp, JobOwner user) throws UWSException, ServletException, IOException{
 		// Get the job:
 		UWSJob job = getJob(requestUrl);
-		
+
 		// Block if necessary:
 		JobSummary.block(waitPolicy, req, job, user);
 

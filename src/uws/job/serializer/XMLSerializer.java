@@ -26,10 +26,10 @@ import java.util.Iterator;
 
 import uws.ISO8601Format;
 import uws.job.ErrorSummary;
-import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.UWS;
 import uws.service.UWSUrl;
@@ -167,7 +167,7 @@ public class XMLSerializer extends UWSSerializer {
 	}
 
 	@Override
-	public String getJobList(JobList jobsList, JobOwner owner, ExecutionPhase[] phaseFilters, boolean root) throws Exception{
+	public String getJobList(final JobList jobsList, JobOwner owner, final JobListFilter filter, final boolean root) throws Exception{
 		StringBuffer xml = new StringBuffer(getHeader());
 
 		xml.append("<jobs version=\"").append(UWS_VERSION).append('"').append(getUWSNamespace(true));
@@ -179,28 +179,17 @@ public class XMLSerializer extends UWSSerializer {
 		xml.append('>');
 
 		UWSUrl jobsListUrl = jobsList.getUrl();
+
+		// Security filter: retrieve only the jobs of the specified owner:
 		Iterator<UWSJob> it = jobsList.getJobs(owner);
-		UWSJob job = null;
-		if (phaseFilters == null || phaseFilters.length == 0){
-			while(it.hasNext()){
-				job = it.next();
-				if (job.getPhase() != ExecutionPhase.ARCHIVED)
-					xml.append("\n\t").append(getJobRef(job, jobsListUrl));
-			}
-		}else{
-			int p;
-			boolean toDisplay;
-			while(it.hasNext()){
-				job = it.next();
-				toDisplay = false;
-				for(p = 0; !toDisplay && p < phaseFilters.length; p++){
-					if (phaseFilters[p] != null)
-						toDisplay = (job.getPhase() == phaseFilters[p]);
-				}
-				if (toDisplay)
-					xml.append("\n\t").append(getJobRef(job, jobsListUrl));
-			}
-		}
+
+		// User filter: filter the jobs in function of filters specified by the user:
+		if (filter != null)
+			it = filter.filter(it);
+
+		// Append the jobs' description:
+		while(it.hasNext())
+			xml.append("\n\t").append(getJobRef(it.next(), jobsListUrl));
 
 		xml.append("\n</jobs>");
 

@@ -21,18 +21,15 @@ package uws.service.actions;
  */
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Enumeration;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import uws.UWSException;
-import uws.UWSToolBox;
-import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.serializer.UWSSerializer;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.UWSService;
 import uws.service.UWSUrl;
@@ -47,7 +44,7 @@ import uws.service.log.UWSLog.LogLevel;
  * This list is serialized by the {@link UWSSerializer} choosed in function of the HTTP Accept header.</p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (03/2015)
+ * @version 4.2 (10/2015)
  */
 public class ListJobs extends UWSAction {
 	private static final long serialVersionUID = 1L;
@@ -90,9 +87,9 @@ public class ListJobs extends UWSAction {
 	 * chooses the serializer and write the serialization of the jobs list in the given response.
 	 * 
 	 * @see #getJobsList(UWSUrl)
-	 * @see #getPhaseFilters(HttpServletRequest)
+	 * @see JobListFilter#JobListFilter(HttpServletRequest)
 	 * @see UWSService#getSerializer(String)
-	 * @see JobList#serialize(ServletOutputStream, UWSSerializer, JobOwner, ExecutionPhase[])
+	 * @see JobList#serialize(ServletOutputStream, UWSSerializer, JobOwner, JobListFilter)
 	 * 
 	 * @see uws.service.actions.UWSAction#apply(uws.service.UWSUrl, java.lang.String, javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
 	 */
@@ -105,7 +102,7 @@ public class ListJobs extends UWSAction {
 		UWSSerializer serializer = uws.getSerializer(request.getHeader("Accept"));
 		response.setContentType(serializer.getMimeType());
 		try{
-			jobsList.serialize(response.getOutputStream(), serializer, user, UWSToolBox.getPhaseFilters(request));
+			jobsList.serialize(response.getOutputStream(), serializer, user, new JobListFilter(request));
 		}catch(Exception e){
 			if (!(e instanceof UWSException)){
 				getLogger().logUWS(LogLevel.ERROR, urlInterpreter, "SERIALIZE", "Can not serialize the jobs list \"" + jobsList.getName() + "\"!", e);

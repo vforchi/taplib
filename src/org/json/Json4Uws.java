@@ -29,6 +29,7 @@ import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
 import uws.job.serializer.XMLSerializer;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.UWS;
 import uws.service.UWSUrl;
@@ -86,10 +87,12 @@ public final class Json4Uws {
 	}
 
 	/**
-	 * Gets the JSON representation of the given jobs list by filtering by owner and execution phase.
+	 * Gets the JSON representation of the given jobs list by filtering using user-specified filters.
+	 * 
 	 * @param jobsList			The jobs list to represent in JSON.
 	 * @param owner				The user who asks to serialize the given jobs list. (MAY BE NULL)
-	 * @param phaseFilters		Specify the phase of only the jobs to display. If null or empty, no filter is applied.
+	 * @param filter			Represent all the specified job filters to apply ; only the job that pass through this filter should be displayed.
+	 *              			If null, all jobs are displayed.
 	 * 
 	 * @return					Its JSON representation.
 	 * 
@@ -97,46 +100,29 @@ public final class Json4Uws {
 	 * 
 	 * @since 4.2
 	 */
-	public final static JSONObject getJson(final JobList jobsList, final JobOwner owner, ExecutionPhase[] phaseFilters) throws JSONException{
+	public final static JSONObject getJson(final JobList jobsList, final JobOwner owner, final JobListFilter filter) throws JSONException{
 		JSONObject json = new JSONObject();
 		if (jobsList != null){
 			json.put("name", jobsList.getName());
 			json.put("version", XMLSerializer.UWS_VERSION);
 			JSONArray jsonJobs = new JSONArray();
 			UWSUrl jobsListUrl = jobsList.getUrl();
-			UWSJob job = null;
 
-			// No phase filter:
-			if (phaseFilters == null || phaseFilters.length == 0){
-				Iterator<UWSJob> it = jobsList.getJobs(owner);
-				JSONObject jsonObj = null;
-				while(it.hasNext()){
-					job = it.next();
-					if (job.getPhase() != ExecutionPhase.ARCHIVED){
-						jsonObj = getJson(job, jobsListUrl, true);
-						if (jsonObj != null)
-							jsonJobs.put(jsonObj);
-					}
-				}
+			// Security filter: retrieve only the jobs of the specified owner:
+			Iterator<UWSJob> it = jobsList.getJobs(owner);
+
+			// User filter: filter the jobs in function of filters specified by the user:
+			if (filter != null)
+				it = filter.filter(it);
+
+			// Append the JSON serialization of all filtered jobs:
+			JSONObject jsonObj = null;
+			while(it.hasNext()){
+				jsonObj = getJson(it.next(), jobsListUrl, true);
+				if (jsonObj != null)
+					jsonJobs.put(jsonObj);
 			}
-			// One or more phase filter(s):
-			else{
-				int p;
-				boolean toDisplay;
-				JSONObject jsonObj = null;
-				Iterator<UWSJob> it = jobsList.getJobs(owner);
-				while(it.hasNext()){
-					job = it.next();
-					toDisplay = (phaseFilters.length < 0);
-					for(p = 0; !toDisplay && p < phaseFilters.length; p++)
-						toDisplay = (job.getPhase() == phaseFilters[p]);
-					if (toDisplay){
-						jsonObj = getJson(job, jobsListUrl, true);
-						if (jsonObj != null)
-							jsonJobs.put(jsonObj);
-					}
-				}
-			}
+
 			json.put("jobs", jsonJobs);
 		}
 		return json;

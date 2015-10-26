@@ -16,7 +16,7 @@ package uws.job.serializer;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012,2014 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -25,10 +25,10 @@ import org.json.Json4Uws;
 
 import uws.ISO8601Format;
 import uws.job.ErrorSummary;
-import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.UWS;
 import uws.service.UWSUrl;
@@ -37,7 +37,7 @@ import uws.service.UWSUrl;
  * Lets serializing any UWS resource in JSON.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.1 (09/2014)
+ * @version 4.2 (10/2015)
  * 
  * @see Json4Uws
  */
@@ -55,8 +55,8 @@ public class JSONSerializer extends UWSSerializer {
 	}
 
 	@Override
-	public String getJobList(final JobList jobsList, final JobOwner owner, final ExecutionPhase[] phaseFilters, final boolean root) throws JSONException{
-		return Json4Uws.getJson(jobsList, owner, phaseFilters).toString();
+	public String getJobList(final JobList jobsList, final JobOwner owner, final JobListFilter filter, final boolean root) throws JSONException{
+		return Json4Uws.getJson(jobsList, owner, filter).toString();
 	}
 
 	@Override

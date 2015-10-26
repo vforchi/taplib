@@ -37,6 +37,7 @@ import uws.job.manager.DefaultExecutionManager;
 import uws.job.manager.DestructionManager;
 import uws.job.manager.ExecutionManager;
 import uws.job.serializer.UWSSerializer;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.UWS;
 import uws.service.UWSService;
@@ -130,7 +131,7 @@ import uws.service.log.UWSLog.LogLevel;
  */
 public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	private static final long serialVersionUID = 1L;
-	
+
 	/**
 	 * <p>Behavior to apply when a job destruction is asked.</p>
 	 * 
@@ -150,7 +151,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * @since {@link JobList#destroyJob(String)}
 	 * @since {@link JobList#destroyJob(String, JobOwner)}
 	 */
-	public static enum JobDestructionPolicy {
+	public static enum JobDestructionPolicy{
 		/** Jobs are ALWAYS immediately destroyed and removed from the {@link JobList}. */
 		ALWAYS_DELETE,
 		/** 
@@ -181,7 +182,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 		 */
 		ALWAYS_ARCHIVE;
 	}
-	
+
 	/** Default policy applied by a job list when a job destruction is asked.
 	 * @since 4.2 */
 	public final static JobDestructionPolicy DEFAULT_JOB_DESTRUCTION_POLICY = JobDestructionPolicy.ARCHIVE_ON_DATE;
@@ -197,7 +198,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 
 	/** The destruction manager to use to take into account the destructionTime field of contained jobs. */
 	private DestructionManager destructionManager = null;
-	
+
 	/** <p>Indicate how this job list behaves when a job destruction is asked.</p>
 	 * <p>
 	 * 	By default, in UWS 1.1, when a job destruction is asked, the job is archived if the destruction date is reached,
@@ -417,7 +418,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * 
 	 * @since 4.2
 	 */
-	public final JobDestructionPolicy getDestroyPolicy() {
+	public final JobDestructionPolicy getDestroyPolicy(){
 		return destructionPolicy;
 	}
 
@@ -429,7 +430,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * 
 	 * @since 4.2
 	 */
-	public final void setDestructionPolicy(JobDestructionPolicy destroyPolicy) {
+	public final void setDestructionPolicy(JobDestructionPolicy destroyPolicy){
 		this.destructionPolicy = (destroyPolicy == null) ? DEFAULT_JOB_DESTRUCTION_POLICY : destroyPolicy;
 	}
 
@@ -678,7 +679,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 			return j.getJobId();
 		}
 	}
-	
+
 	/**
 	 * <p>Archive the specified job.</p>
 	 * 
@@ -693,20 +694,20 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 */
 	public boolean archiveJob(final String jobId){
 		UWSJob job = getJob(jobId);
-		
+
 		if (job != null){
 			// Archive the job:
 			job.archive();
-			
+
 			// Save the owner jobs list:
 			if (job.getOwner() != null && uws.getBackupManager() != null)
 				uws.getBackupManager().saveOwner(job.getOwner());
-			
+
 			return true;
 		}else
 			return false;
 	}
-	
+
 	/**
 	 * <p>Archive the specified job.</p>
 	 * 
@@ -722,7 +723,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * 
 	 * @throws UWSException	If the given user is not allowed to update the content of this jobs list or to archive the specified job.
 	 */
-	public boolean archiveJob(final String jobId, final JobOwner user) throws UWSException {
+	public boolean archiveJob(final String jobId, final JobOwner user) throws UWSException{
 		if (user != null){
 			if (!user.hasWritePermission(this))
 				throw new UWSException(UWSException.PERMISSION_DENIED, UWSExceptionFactory.writePermissionDenied(user, true, getName()));
@@ -792,15 +793,15 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * @see #archiveJob(String)
 	 */
 	public boolean destroyJob(final String jobId){
-		
+
 		// Get the corresponding job and return immediately if none can be found:
 		UWSJob job = getJob(jobId);
 		if (job == null)
 			return false;
-		
+
 		// Determine whether the destruction date is already reached or not:
 		boolean dateReached = job.getDestructionTime() != null && job.getDestructionTime().compareTo(new Date()) <= 0;
-		
+
 		/* 3 policies are possible for a job destruction:
 		 *   a. ALWAYS_DELETE => whatever is the job destruction time or the job phase, the job is immediately destroyed.
 		 *   b. ALWAYS_ARCHIVE => the job is destroyed ONLY if its phase is already ARCHIVED OR if its destruction date is not yet reached.
@@ -808,7 +809,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 		 *   c. ARCHIVE_ON_DATE => the job is destroyed ONLY IF the destruction is reached. Otherwise the job is archived.
 		 * 
 		 *  Which gives the 2 following cases: */
-		
+
 		// CASE 1: Destroy the job if already ARCHIVED, if ALWAYS_DELETE is the policy, or if the destruction date is not reached while the policy is ARCHIVE_ON_DATE:
 		if (job.getPhase() == ExecutionPhase.ARCHIVED || destructionPolicy == JobDestructionPolicy.ALWAYS_DELETE || (destructionPolicy == JobDestructionPolicy.ARCHIVE_ON_DATE && !dateReached)){
 			// Remove the job:
@@ -902,16 +903,16 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 			}
 		}
 	}
-	
+
 	/**
 	 * Serializes the while object in the given output stream,
-	 * considering the given owner ID, the given execution phase restrictions
+	 * considering the given owner ID, the given user filters
 	 * and thanks to the given serializer.
 	 * 
 	 * @param output		The ouput stream in which this object must be serialized.
 	 * @param serializer	The serializer to use.
 	 * @param ownerId		The ID of the current ID.
-	 * @param phaseFilters	Specify the execution phase of only the jobs to display. 
+	 * @param filter		Represent all the specified job filters.
 	 * 
 	 * @throws UWSException		If the owner is not allowed to see the content of the serializable object.
 	 * @throws IOException		If there is an error while writing in the given stream. 
@@ -921,14 +922,14 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * 
 	 * @since 4.2
 	 */
-	public void serialize(ServletOutputStream output, UWSSerializer serializer, JobOwner owner, ExecutionPhase[] phaseFilters) throws UWSException, IOException, Exception{
+	public void serialize(ServletOutputStream output, UWSSerializer serializer, JobOwner owner, final JobListFilter filter) throws UWSException, IOException, Exception{
 		if (output == null)
 			throw new NullPointerException("Missing serialization output stream!");
 
 		if (owner != null && !owner.hasReadPermission(this))
 			throw new UWSException(UWSException.PERMISSION_DENIED, UWSExceptionFactory.writePermissionDenied(owner, true, getName()));
 
-		String serialization = serializer.getJobList(this, owner, phaseFilters, true);
+		String serialization = serializer.getJobList(this, owner, filter, true);
 		if (serialization != null){
 			output.print(serialization);
 			output.flush();

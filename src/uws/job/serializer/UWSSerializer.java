@@ -25,10 +25,10 @@ import java.io.Serializable;
 import uws.ISO8601Format;
 import uws.UWSException;
 import uws.job.ErrorSummary;
-import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
+import uws.job.serializer.filter.JobListFilter;
 import uws.job.user.JobOwner;
 import uws.service.UWS;
 import uws.service.UWSService;
@@ -43,7 +43,7 @@ import uws.service.UWSUrl;
  * </ul>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (03/2015)
+ * @version 4.2 (10/2015)
  * 
  * @see XMLSerializer
  * @see JSONSerializer
@@ -227,11 +227,12 @@ public abstract class UWSSerializer implements Serializable {
 	}
 
 	/**
-	 * Serializes the given jobs list, by filtering by user and/or by execution phase.
+	 * Serializes the given jobs list, by filtering using user-specified filters.
 	 * 
 	 * @param jobsList		The jobs list to serialize.
 	 * @param owner			The user which has asked the serialization of the given jobs list. If null, all anonymous jobs are displayed.
-	 * @param phaseFilters	Specify the phase of only the jobs to display. If null or empty, no filter is applied.
+	 * @param filter		Represent all the specified job filters to apply ; only the job that pass through this filter should be displayed.
+	 *              		If null, all jobs are displayed.
 	 * @param root			<i>false</i> if the jobs list to serialize will be included
 	 * 						in a top level serialization (for a jobs list: uws), <i>true</i> otherwise.
 	 * @return				The serialization of the given jobs list.
@@ -240,7 +241,7 @@ public abstract class UWSSerializer implements Serializable {
 	 * 
 	 * @since 4.2
 	 */
-	public abstract String getJobList(final JobList jobsList, JobOwner owner, ExecutionPhase[] phaseFilters, final boolean root) throws Exception;
+	public abstract String getJobList(final JobList jobsList, JobOwner owner, final JobListFilter filter, final boolean root) throws Exception;
 
 	/**
 	 * Serializes the whole given job.
