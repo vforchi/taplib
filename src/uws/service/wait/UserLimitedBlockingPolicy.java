@@ -1,17 +1,5 @@
 package uws.service.wait;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
-import javax.servlet.http.HttpServletRequest;
-
-import uws.job.UWSJob;
-import uws.job.user.JobOwner;
-
 /*
  * This file is part of UWSLibrary.
  * 
@@ -30,6 +18,18 @@ import uws.job.user.JobOwner;
  * 
  * Copyright 2015 - Astronomisches Rechen Institut (ARI)
  */
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
+import javax.servlet.http.HttpServletRequest;
+
+import uws.job.UWSJob;
+import uws.job.user.JobOwner;
 
 /**
  * <p>This {@link BlockingPolicy} extends the {@link LimitedBlockingPolicy}. So, it proposes to limit the blocking duration
@@ -63,28 +63,28 @@ import uws.job.user.JobOwner;
  * </p>
  * 
  * @author Gr&eacute;gory Mantelet (ARI)
- * @version 4.2 (05/2015)
+ * @version 4.2 (10/2015)
  * @since 4.2
  */
 public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
-	
+
 	/** Default number of allowed blocked threads. */
 	public final static int DEFAULT_NB_MAX_BLOCKED = 3;
-	
+
 	/** The maximum number of blocked thread for a given job and user. */
 	protected final int maxBlockedThreadsByUser;
-	
+
 	/** List of all blocked threads.
 	 * Keys are an ID identifying a given job AND a given user
 	 * (basically: jobId+";"+userId ;  see {@link #buildKey(UWSJob, JobOwner, HttpServletRequest)} for more details).
 	 * Values are fixed-length queues of blocked threads. */
-	protected final Map<String, BlockingQueue<Thread>> blockedThreads;
-	
+	protected final Map<String,BlockingQueue<Thread>> blockedThreads;
+
 	/** Indicate what should happen when the maximum number of threads for a given job and user is reached.
 	 * <code>true</code> to unblock the oldest blocked thread in order to allow the new blocking.
 	 * <code>false</code> to forbid new blocking. */
 	protected final boolean unblockOld;
-	
+
 	/**
 	 * <p>Build a default {@link UserLimitedBlockingPolicy}.</p>
 	 * 
@@ -96,7 +96,7 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 	 * 
 	 * <p>When the limit of threads is reached, the oldest thread is unblocked in order to allow the new incoming blocking.</p>
 	 */
-	public UserLimitedBlockingPolicy() {
+	public UserLimitedBlockingPolicy(){
 		this(DEFAULT_TIMEOUT, DEFAULT_NB_MAX_BLOCKED);
 	}
 
@@ -108,11 +108,12 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 	 * <p>When the limit of threads is reached, the oldest thread is unblocked in order to allow the new incoming blocking.</p>
 	 * 
 	 * @param timeout	Maximum blocking duration (in seconds).
-	 *               	<i>If &lt; 0, the default timeout (see {@link LimitedBlockingPolicy#DEFAULT_TIMEOUT}) will be set.</i>
+	 *               	<i>If &lt; 0, the default timeout (see {@link LimitedBlockingPolicy#DEFAULT_TIMEOUT}) will be set.
+	 *               	If 0, no blocking will ever be performed.</i>
 	 * 
 	 * @see LimitedBlockingPolicy#LimitedBlockingPolicy(long)
 	 */
-	public UserLimitedBlockingPolicy(final long timeout) {
+	public UserLimitedBlockingPolicy(final long timeout){
 		this(timeout, DEFAULT_NB_MAX_BLOCKED);
 	}
 
@@ -123,12 +124,13 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 	 * <p>When the limit of threads is reached, the oldest thread is unblocked in order to allow the new incoming blocking.</p>
 	 * 
 	 * @param timeout		Maximum blocking duration (in seconds).
-	 *               		<i>If &lt; 0, the default timeout (see {@link LimitedBlockingPolicy#DEFAULT_TIMEOUT}) will be set.</i>
+	 *               		<i>If &lt; 0, the default timeout (see {@link LimitedBlockingPolicy#DEFAULT_TIMEOUT}) will be set.
+	 *               		If 0, no blocking will ever be performed.</i>
 	 * @param maxNbBlocked	Maximum number of blocked threads allowed for a given job and a given user.
 	 *                    	<i>If &le; 0, this parameter will be ignored and the default value
 	 *                    	(i.e. {@value #DEFAULT_NB_MAX_BLOCKED}) will be set instead.</i>
 	 */
-	public UserLimitedBlockingPolicy(final long timeout, final int maxNbBlocked) {
+	public UserLimitedBlockingPolicy(final long timeout, final int maxNbBlocked){
 		this(timeout, maxNbBlocked, true);
 	}
 
@@ -142,7 +144,8 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 	 * </p>
 	 * 
 	 * @param timeout		Maximum blocking duration (in seconds).
-	 *               		<i>If &lt; 0, the default timeout (see {@link LimitedBlockingPolicy#DEFAULT_TIMEOUT}) will be set.</i>
+	 *               		<i>If &lt; 0, the default timeout (see {@link LimitedBlockingPolicy#DEFAULT_TIMEOUT}) will be set.
+	 *               		If 0, no blocking will ever be performed.</i>
 	 * @param maxNbBlocked	Maximum number of blocked threads allowed for a given job and a given user.
 	 *                    	<i>If &le; 0, this parameter will be ignored and the default value
 	 *                    	(i.e. {@value #DEFAULT_NB_MAX_BLOCKED}) will be set instead.</i>
@@ -150,13 +153,13 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 	 *                  	<code>true</code> to unblock the oldest thread in order to allow the new incoming blocking,
 	 *                  	<code>false</code> to forbid the new incoming blocking.
 	 */
-	public UserLimitedBlockingPolicy(final long timeout, final int maxNbBlocked, final boolean unblockOld) {
+	public UserLimitedBlockingPolicy(final long timeout, final int maxNbBlocked, final boolean unblockOld){
 		super(timeout);
 		maxBlockedThreadsByUser = (maxNbBlocked <= 0) ? DEFAULT_NB_MAX_BLOCKED : maxNbBlocked;
-		blockedThreads = Collections.synchronizedMap(new HashMap<String, BlockingQueue<Thread>>());
+		blockedThreads = Collections.synchronizedMap(new HashMap<String,BlockingQueue<Thread>>());
 		this.unblockOld = unblockOld;
 	}
-	
+
 	/**
 	 * <p>Build the key for the map {@link #blockedThreads}.</p>
 	 * 
@@ -180,23 +183,27 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 	protected final String buildKey(final UWSJob job, final JobOwner user, final HttpServletRequest request){
 		if (user == null || user.getID() == null){
 			if (request == null)
-				return job.getJobId()+";???";
+				return job.getJobId() + ";???";
 			else
-				return job.getJobId()+";"+request.getRemoteAddr();
+				return job.getJobId() + ";" + request.getRemoteAddr();
 		}else
-			return job.getJobId()+";"+user.getID();
+			return job.getJobId() + ";" + user.getID();
 	}
-	
+
 	@Override
-	public long block(final Thread thread, final long userDuration, final UWSJob job, final JobOwner user, final HttpServletRequest request) {
+	public long block(final Thread thread, final long userDuration, final UWSJob job, final JobOwner user, final HttpServletRequest request){
+		// Nothing should happen if no thread and/or no job is provided:
+		if (job == null || thread == null)
+			return 0;
+
 		// Get the ID of the blocking (job+user):
 		String id = buildKey(job, user, request);
-		
+
 		// Get the corresponding queue (if any):
 		BlockingQueue<Thread> queue = blockedThreads.get(id);
 		if (queue == null)
 			queue = new ArrayBlockingQueue<Thread>(maxBlockedThreadsByUser);
-		
+
 		// Try to add the recently blocked thread:
 		if (!queue.offer(thread)){
 			/* If it fails, 2 strategies are possible: */
@@ -217,23 +224,27 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 			else
 				return 0;
 		}
-		
+
 		// Add the queue into the map:
 		blockedThreads.put(id, queue);
-		
+
 		// Return the eventually limited duration to wait:
 		return super.block(thread, userDuration, job, user, request);
-		
+
 	}
 
 	@Override
-	public void unblocked(final Thread unblockedThread, final UWSJob job, final JobOwner user, final HttpServletRequest request) {
+	public void unblocked(final Thread unblockedThread, final UWSJob job, final JobOwner user, final HttpServletRequest request){
+		// Nothing should happen if no thread and/or no job is provided:
+		if (job == null || unblockedThread == null)
+			return;
+
 		// Get the ID of the blocking (job+user):
 		String id = buildKey(job, user, request);
-		
+
 		// Get the corresponding queue (if any):
 		BlockingQueue<Thread> queue = blockedThreads.get(id);
-		
+
 		if (queue != null){
 			Iterator<Thread> it = queue.iterator();
 			// Search for the corresponding item inside the queue:
@@ -250,6 +261,5 @@ public class UserLimitedBlockingPolicy extends LimitedBlockingPolicy {
 			}
 		}
 	}
-	
-	
+
 }

@@ -1,10 +1,5 @@
 package uws.service.wait;
 
-import javax.servlet.http.HttpServletRequest;
-
-import uws.job.UWSJob;
-import uws.job.user.JobOwner;
-
 /*
  * This file is part of UWSLibrary.
  * 
@@ -24,15 +19,20 @@ import uws.job.user.JobOwner;
  * Copyright 2015 - Astronomisches Rechen Institut (ARI)
  */
 
+import javax.servlet.http.HttpServletRequest;
+
+import uws.job.UWSJob;
+import uws.job.user.JobOwner;
+
 /**
  * Implementations of this interface defines the policy to apply when a blocking of a request is asked by a UWS client.
  * 
  * @author Gr&eacute;gory Mantelet (ARI)
- * @version 4.2 (05/2015)
+ * @version 4.2 (10/2015)
  * @since 4.2
  */
 public interface BlockingPolicy {
-	
+
 	/**
 	 * <p>Notify this {@link BlockingPolicy} that the given thread is going to be blocked for the specified duration.
 	 * This function then decides how long the given thread must wait before resuming.</p>
@@ -77,7 +77,7 @@ public interface BlockingPolicy {
 	 * @throws NullPointerException	If the given thread is NULL.
 	 */
 	public long block(final Thread thread, final long userDuration, final UWSJob job, final JobOwner user, final HttpServletRequest request) throws NullPointerException;
-	
+
 	/**
 	 * Notify this {@link BlockingPolicy} that the given thread is not blocked anymore.
 	 * 
@@ -92,5 +92,5 @@ public interface BlockingPolicy {
 	 *               			<i>Should not be NULL.</i>
 	 */
 	public void unblocked(final Thread unblockedThread, final UWSJob job, final JobOwner user, final HttpServletRequest request);
-	
+
 }
