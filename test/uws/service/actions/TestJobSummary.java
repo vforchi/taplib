@@ -76,7 +76,30 @@ public class TestJobSummary {
 		assertFalse(t.isAlive());
 		assertTrue(t.getTime() >= 0 && t.getTime() < 1);
 
+		// No WAIT value or a not legal value (not integer) => no blocking:
+		req.clearParams();
+		t = new TestThread(null, req, job, null);
+		t.start();
+		waitFor(t);
+		assertFalse(t.isAlive());
+		assertTrue(t.getTime() >= 0 && t.getTime() < 1);
+		req.addParams("WAIT", "");
+		t = new TestThread(null, req, job, null);
+		t.start();
+		waitFor(t);
+		assertFalse(t.isAlive());
+		assertTrue(t.getTime() >= 0 && t.getTime() < 1);
+		req.clearParams();
+		req.addParams("WAIT", "foo");
+		t = new TestThread(null, req, job, null);
+		t.start();
+		waitFor(t);
+		assertFalse(t.isAlive());
+		assertTrue(t.getTime() >= 0 && t.getTime() < 1);
+
 		// With a job not in an "active" phase => No blocking ; immediate return:
+		req.clearParams();
+		req.addParams("WAIT", "" + waitingDuration);
 		ExecutionPhase[] nonActivePhases = new ExecutionPhase[]{ExecutionPhase.COMPLETED,ExecutionPhase.ABORTED,ExecutionPhase.ERROR,ExecutionPhase.ARCHIVED,ExecutionPhase.HELD,ExecutionPhase.SUSPENDED,ExecutionPhase.UNKNOWN};
 		for(ExecutionPhase p : nonActivePhases){
 			try{

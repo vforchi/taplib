@@ -133,8 +133,9 @@ public class JobSummary extends UWSAction {
 	 * 
 	 * <p>This function expects the 2 following HTTP-GET parameters:</p>
 	 * <ul>
-	 * 	<li><b>WAIT</b>: <i>[MANDATORY]</i> with or without value (in seconds). If a value is provided it must be a positive and not null integer expressing a duration in seconds
-	 * 	                 or -1 for an infinite time. If a not legal value is provided, the parameter will be ignored and no blocking will be performed.<br/>
+	 * 	<li><b>WAIT</b>: <i>[MANDATORY]</i> with a value (in seconds). The value must be a positive and not null integer expressing a duration in seconds
+	 * 	                 or -1 (or any other negative value) for an infinite time. If a not legal value or no value is provided, the parameter will be
+	 * 	                 ignored and no blocking will be performed.<br/>
 	 * 	                 This parameter raises a flag meaning a blocking is required and eventually a time (in seconds) to wait before stop blocking.</li>
 	 * 
 	 * 	<li><b>PHASE</b>: <i>[OPTIONAL]</i> A legal execution phase must be provided, otherwise this parameter will be ignored.<br/>
@@ -181,14 +182,15 @@ public class JobSummary extends UWSAction {
 			param = parameters.nextElement();
 			values = req.getParameterValues(param);
 			if (param.toUpperCase().equals("WAIT")){
+				/* note: a value MUST be given for a WAIT parameter ; if it is missing no blocking will occur */
 				if (values == null || values.length == 0)
-					waitingTime = -1;
+					waitingTime = 0;
 				else{
 					for(int i = values.length - 1; waitingTime == 0 && i >= 0; i--){
 						try{
-							/* note: if the parameter is missing or if no value is set, it should be understood as an unlimited duration */
+							/* note: a value MUST be given for a WAIT parameter ; if it is missing no blocking will occur */
 							if (values[i].trim().length() == 0)
-								waitingTime = -1;
+								waitingTime = 0;
 							else
 								waitingTime = Long.parseLong(values[i]);
 						}catch(NumberFormatException nfe){}
