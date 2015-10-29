@@ -20,7 +20,9 @@ package org.json;
  *                       Astronomisches Rechen Institut (ARI)
  */
 
+import java.util.Date;
 import java.util.Iterator;
+import java.util.Map;
 
 import uws.ISO8601Format;
 import uws.job.ErrorSummary;
@@ -173,6 +175,8 @@ public final class Json4Uws {
 				json.put(UWSJob.PARAM_PARAMETERS, getJobParamsJson(job));
 				json.put(UWSJob.PARAM_RESULTS, getJobResultsJson(job));
 				json.put(UWSJob.PARAM_ERROR_SUMMARY, getJson(job.getErrorSummary()));
+				if (job.countJobInfo() > 0)
+					json.put(UWSJob.PARAM_JOB_INFO, getJson(job.getJobInfo()));
 			}
 		}
 		return json;
@@ -262,6 +266,30 @@ public final class Json4Uws {
 			errorJson.put("message", error.getMessage());
 		}
 		return errorJson;
+	}
+
+	/**
+	 * Gets the JSON representation of the given list of job information.
+	 * @param error				The job information to represent in JSON.
+	 * @return					Its JSON representation.
+	 * @throws JSONException	If there is an error while building the JSON object.
+	 * @since 4.2
+	 */
+	public final static JSONObject getJson(final Iterator<Map.Entry<String,Object>> jobInfo) throws JSONException{
+		JSONObject jobInfoJson = new JSONObject();
+		if (jobInfo != null){
+			Map.Entry<String,Object> entry;
+			while(jobInfo.hasNext()){
+				entry = jobInfo.next();
+				if (entry.getValue() == null)
+					continue;
+				else if (entry.getValue() instanceof Date)
+					jobInfoJson.put(entry.getKey(), ISO8601Format.format((Date)entry.getValue()));
+				else
+					jobInfoJson.put(entry.getKey(), entry.getValue());
+			}
+		}
+		return jobInfoJson;
 	}
 
 	/**

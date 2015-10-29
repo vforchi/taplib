@@ -629,6 +629,8 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 				InputStream input = null;
 				try{
 					input = getFileManager().getResultInput(result, job);
+					if (input == null)
+						throw new UWSException(UWSException.NOT_FOUND, "No result identified with \"" + attributes[1] + "\" in the job \"" + job.getJobId() + "\"!");
 					UWSToolBox.write(input, result.getMimeType(), result.getSize(), resp);
 				}catch(IOException ioe){
 					getLogger().logUWS(LogLevel.ERROR, result, "GET_RESULT", "Can not read the content of the result \"" + result.getId() + "\" of the job \"" + job.getJobId() + "\"!", ioe);
@@ -647,6 +649,8 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 				InputStream input = null;
 				try{
 					input = getFileManager().getErrorInput(error, job);
+					if (input == null)
+						throw new UWSException(UWSException.NOT_FOUND, "No error summary for the job \"" + job.getJobId() + "\"!");
 					UWSToolBox.write(input, errorWriter.getErrorDetailsMIMEType(), getFileManager().getErrorSize(error, job), resp);
 				}catch(IOException ioe){
 					getLogger().logUWS(LogLevel.ERROR, error, "GET_ERROR", "Can not read the details of the error summary of the job \"" + job.getJobId() + "\"!", ioe);
@@ -665,6 +669,8 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 				InputStream input = null;
 				try{
 					input = getFileManager().getUploadInput(upl);
+					if (input == null)
+						throw new UWSException(UWSException.NOT_FOUND, "No input file identified with \"" + attributes[1] + "\" in the job \"" + job.getJobId() + "\"!");
 					UWSToolBox.write(input, upl.mimeType, upl.length, resp);
 				}catch(IOException ioe){
 					getLogger().logUWS(LogLevel.ERROR, upl, "GET_PARAMETER", "Can not read the content of the uploaded file \"" + upl.paramName + "\" of the job \"" + job.getJobId() + "\"!", ioe);
@@ -680,7 +686,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 			UWSSerializer serializer = getSerializer(req.getHeader("Accept"));
 			String uwsField = attributes[0];
 			boolean jobSerialization = false;
-			if (uwsField == null || uwsField.trim().isEmpty() || (attributes.length <= 1 && (uwsField.equalsIgnoreCase(UWSJob.PARAM_ERROR_SUMMARY) || uwsField.equalsIgnoreCase(UWSJob.PARAM_RESULTS) || uwsField.equalsIgnoreCase(UWSJob.PARAM_PARAMETERS)))){
+			if (uwsField == null || uwsField.trim().isEmpty() || (attributes.length <= 1 && (uwsField.equalsIgnoreCase(UWSJob.PARAM_ERROR_SUMMARY) || uwsField.equalsIgnoreCase(UWSJob.PARAM_RESULTS) || uwsField.equalsIgnoreCase(UWSJob.PARAM_PARAMETERS) || uwsField.equalsIgnoreCase(UWSJob.PARAM_JOB_INFO)))){
 				resp.setContentType(serializer.getMimeType());
 				jobSerialization = true;
 			}else

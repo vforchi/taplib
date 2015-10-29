@@ -21,6 +21,7 @@ package uws;
  */
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -56,7 +57,7 @@ import uws.service.request.UploadFile;
  * Some useful functions for the managing of a UWS service.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.1 (02/2015)
+ * @version 4.2 (10/2015)
  */
 public class UWSToolBox {
 
@@ -240,7 +241,7 @@ public class UWSToolBox {
 
 		return parameters;
 	}
-	
+
 	/**
 	 * <p>Get the list of all execution phase restrictions given in HTTP-GET parameters.</p>
 	 * 
@@ -264,13 +265,13 @@ public class UWSToolBox {
 		String pName;
 		String[] phases;
 		ArrayList<ExecutionPhase> lstPhases = new ArrayList<ExecutionPhase>();
-		
+
 		// Get all parameters' names:
 		Enumeration<String> paramNames = request.getParameterNames();
 		while(paramNames.hasMoreElements()){
 			pName = paramNames.nextElement();
 			// process only PHASE parameters (case INsensitively):
-			if(pName.toUpperCase().equals("PHASE")){
+			if (pName.toUpperCase().equals("PHASE")){
 				// get all values for this parameter name:
 				phases = request.getParameterValues(pName);
 				for(String p : phases){
@@ -286,11 +287,11 @@ public class UWSToolBox {
 				}
 			}
 		}
-		
+
 		// If at least one execution phase has been successfully identified, return an array:
 		if (lstPhases.size() > 0)
 			return lstPhases.toArray(new ExecutionPhase[lstPhases.size()]);
-		
+
 		// Otherwise, NULL is returned:
 		else
 			return null;
@@ -541,8 +542,12 @@ public class UWSToolBox {
 			if (contentSize > 0)
 				response.setContentLength((int)contentSize);
 
-			// Write the file into the HTTP response:
+			// Get the output stream for the HTTP response:
 			output = response.getOutputStream();
+			if (output == null)
+				throw new FileNotFoundException("Missing output stream!");
+
+			// Write the file into the HTTP response:
 			byte[] buffer = new byte[1024];
 			int length;
 			while((length = input.read(buffer)) > 0)

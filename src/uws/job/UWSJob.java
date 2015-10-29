@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -120,7 +121,7 @@ import uws.service.request.UploadFile;
  * </ul>
  * 
  * @author	Gr&eacute;gory Mantelet (CDS;ARI)
- * @version	4.2 (05/2015)
+ * @version	4.2 (10/2015)
  */
 public class UWSJob extends SerializableUWSObject {
 	private static final long serialVersionUID = 1L;
@@ -175,6 +176,10 @@ public class UWSJob extends SerializableUWSObject {
 
 	/** Name of the parameter <i>results</i>. */
 	public static final String PARAM_RESULTS = "results";
+
+	/** Name of the parameter <i>jobInfo</i>.
+	 * @since 4.2 */
+	public static final String PARAM_JOB_INFO = "jobInfo";
 
 	/** Default value of {@link #owner} if no ID are given at the job creation. */
 	public final static String ANONYMOUS_OWNER = "anonymous";
@@ -266,6 +271,10 @@ public class UWSJob extends SerializableUWSObject {
 
 	/** If this job has been restored, this attribute should be set with the date of its restoration. */
 	private final Date restorationDate;
+
+	/** List of any other information that a UWS implementation wants to store/manage.
+	 * @since 4.2 */
+	private final Map<String,Object> jobInfo = new LinkedHashMap<String,Object>();
 
 	/* ************ */
 	/* CONSTRUCTORS */
@@ -1023,7 +1032,7 @@ public class UWSJob extends SerializableUWSObject {
 
 		return (updated.length == params.size());
 	}
-	
+
 	protected void refreshJobLinks(final String updatedParam){
 		// CASE DESTRUCTION_TIME: update the thread dedicated to the destruction:
 		if (updatedParam.equals(PARAM_DESTRUCTION_TIME)){
@@ -1193,6 +1202,141 @@ public class UWSJob extends SerializableUWSObject {
 				return url.jobSummary(myJobList.getName(), jobId);
 		}
 		return null;
+	}
+
+	/* ******** */
+	/* JOB INFO */
+	/* ******** */
+
+	/**
+	 * <p>Get the value of the specified piece of job information.</p>
+	 * 
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p>
+	 * 
+	 * @param infoName	Name of the piece of job information to get.
+	 * 
+	 * @return	Value of the specified piece of job information,
+	 *        	or NULL, if no value is set for the specified name.
+	 * 
+	 * @since 4.2
+	 */
+	public final Object getJobInfo(final String infoName){
+		return jobInfo.get(infoName);
+	}
+
+	/**
+	 * <p>Set/Reset the specified piece of job information with the given value.</p>
+	 * 
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p>
+	 * 
+	 * @param infoName	Name of the piece of job information to set/reset.
+	 * @param value		Value of the specified piece of job information.
+	 *             		<i>If NULL, the specified piece of job information will be removed.</i>
+	 * 
+	 * @return	The former value associated to the specified piece of job information,
+	 *        	or NULL if this piece of job information has never been set before.
+	 * 
+	 * @since 4.2
+	 */
+	public final Object putJobInfo(final String infoName, final Object value){
+		if (infoName == null || infoName.trim().length() == 0)
+			return null;
+
+		if (value == null)
+			return jobInfo.remove(infoName);
+		else
+			return jobInfo.put(infoName, value);
+	}
+
+	/**
+	 * <p>Remove the specified piece of job information.</p>
+	 * 
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p>
+	 * 
+	 * @param infoName	Name of the piece of job information to remove.
+	 * 
+	 * @return	The former value associated to the specified piece of job information,
+	 *        	or NULL if this piece of job information has never been set before.
+	 * 
+	 * @since 4.2
+	 */
+	public final Object removeJobInfo(final String infoName){
+		return jobInfo.remove(infoName);
+	}
+
+	/**
+	 * <p>Get the number of job information associated with this job.</p>
+	 * 
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p>
+	 * 
+	 * @return	The number of all set job information.
+	 * 
+	 * @since 4.2
+	 */
+	public final int countJobInfo(){
+		return jobInfo.size();
+	}
+
+	/**
+	 * <p>Get the name of all job information associated to this job.</p>
+	 * 
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p> 
+	 * 
+	 * @return	An iterator on the list of job information names.
+	 * 
+	 * @since 4.2
+	 */
+	public final Iterator<String> getJobInfoNames(){
+		return jobInfo.keySet().iterator();
+	}
+
+	/**
+	 * <p>Get all job information associated to this job.</p>
+	 * 
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p> 
+	 * 
+	 * @return	An iterator on the list of all job information.
+	 * 
+	 * @since 4.2
+	 */
+	public final Iterator<Map.Entry<String,Object>> getJobInfo(){
+		return jobInfo.entrySet().iterator();
 	}
 
 	/* ******************** */
@@ -1435,31 +1579,43 @@ public class UWSJob extends SerializableUWSObject {
 	protected final boolean isStopped(){
 		return thread == null || !thread.isAlive() || thread.isInterrupted() || thread.isFinished();
 	}
-	
+
 	/**
 	 * <p>Archive this job.</p>
 	 * 
+	 * <p>An archived job can not be executed any more.</p>
+	 * 
 	 * <p>
-	 * 	An archive job can not be executed any more. All its associated resources (i.e. threads and files) are destroyed but
-	 * 	the description of the job stays unchanged (except the execution phase which will then be {@link ExecutionPhase#ARCHIVED}).
+	 * 	Only all its results are destroyed. The description of the job, the input files
+	 * 	and the error summary stay unchanged (except the execution phase which will
+	 * 	then be {@link ExecutionPhase#ARCHIVED}).
 	 * </p>
 	 * 
-	 * @return	<code>if this job has been successfully archived, <code>false</code> otherwise.
+	 * <p><i>Note:
+	 * 	The current phrase is stored as job information in order to satisfy the user curiosity
+	 * 	(i.e. "in what phase was this job before being archived?").
+	 * </i></p>
+	 * 
+	 * @return	<code>true</code> if this job has been successfully archived,
+	 *        	<code>false</code> otherwise.
 	 * 
 	 * @throws UWSException	If any error occurs while clearing resources or changing the phase of this job.
 	 * 
 	 * @since 4.2
 	 */
-	public boolean archive() {
-		// Interrupt the corresponding thread and remove all other resources attached to this job:
-		clearResources();
-		
+	public boolean archive(){
+		// Interrupt the corresponding thread and remove only results associated with this job:
+		clearResources(false);
+
 		// Ensure this job is no longer in the destruction manager:
 		if (getJobList() != null && getJobList().getDestructionManager() != null)
 			getJobList().getDestructionManager().remove(this);
 
 		// Change the phase:
 		try{
+			// store the current phase as additional JobInfo for user curiosity:
+			putJobInfo("oldPhase", getPhase());
+			// change phase:
 			setPhase(ExecutionPhase.ARCHIVED);
 			return true;
 		}catch(UWSException ue){
@@ -1470,11 +1626,30 @@ public class UWSJob extends SerializableUWSObject {
 
 	/**
 	 * <p>Stops the job if running, removes the job from the execution manager, stops the timer for the execution duration
+	 * and clear ALL files AND ANY other resources associated with this job.</p>
+	 * 
+	 * <p><i>By default the job is aborted, the {@link UWSJob#thread} attribute is set to null, the timers are stopped and uploaded files, results and the error summary are deleted.</i></p>
+	 * 
+	 * @see #clearResources(boolean)
+	 */
+	public void clearResources(){
+		clearResources(true);
+	}
+
+	/**
+	 * <p>Stops the job if running, removes the job from the execution manager, stops the timer for the execution duration
 	 * and may clear all files or any other resources associated to this job.</p>
 	 * 
 	 * <p><i>By default the job is aborted, the {@link UWSJob#thread} attribute is set to null, the timers are stopped and uploaded files, results and the error summary are deleted.</i></p>
+	 * 
+	 * @param fullClean		Indicate whether all resources (for real deletion of the job) or just some the threads and results
+	 *                  	(e.g. for archived jobs for instance) must be freed.
+	 *                  	<code>true</code> to stop the job and delete everything (input files, results and error summary),
+	 *                  	or <code>false</code> to stop the job and delete all results but not input files and the error summary.
+	 * 
+	 * @since 4.2
 	 */
-	public void clearResources(){
+	public void clearResources(final boolean fullClean){
 		// If still running, abort/stop the job:
 		if (isRunning()){
 			try{
@@ -1492,36 +1667,50 @@ public class UWSJob extends SerializableUWSObject {
 		thread = null;
 
 		// Clear all uploaded files:
-		Iterator<UploadFile> files = inputParams.getFiles();
-		UploadFile upl;
-		while(files.hasNext()){
-			upl = files.next();
-			try{
-				upl.deleteFile();
-			}catch(IOException ioe){
-				getLogger().logJob(LogLevel.ERROR, this, "CLEAR_RESOURCES", "Impossible to delete the file uploaded as parameter \"" + upl.paramName + "\" (" + upl.getLocation() + ") of the job \"" + jobId + "\"!", null);
+		if (fullClean){
+			Iterator<UploadFile> itFiles = inputParams.getFiles();
+			UploadFile upl;
+			while(itFiles.hasNext()){
+				upl = itFiles.next();
+				try{
+					// delete the file:
+					upl.deleteFile();
+					// delete the internal reference to this input parameter:
+					itFiles.remove();
+				}catch(IOException ioe){
+					getLogger().logJob(LogLevel.ERROR, this, "CLEAR_RESOURCES", "Impossible to delete the file uploaded as parameter \"" + upl.paramName + "\" (" + upl.getLocation() + ") of the job \"" + jobId + "\"!", null);
+				}
 			}
 		}
 
 		// Clear all results file:
-		for(Result r : results.values()){
+		Iterator<Result> itResults = getResults();
+		Result r;
+		while(itResults.hasNext()){
+			r = itResults.next();
 			try{
+				// delete the file:
 				getFileManager().deleteResult(r, this);
+				// delete the internal reference to this result:
+				itResults.remove();
 			}catch(IOException ioe){
 				getLogger().logJob(LogLevel.ERROR, this, "CLEAR_RESOURCES", "Impossible to delete the file associated with the result '" + r.getId() + "' of the job \"" + jobId + "\"!", ioe);
 			}
 		}
 
 		// Clear the error file:
-		if (errorSummary != null && errorSummary.hasDetail()){
+		if (fullClean && errorSummary != null && errorSummary.hasDetail()){
 			try{
+				// delete the file associated with the error details:
 				getFileManager().deleteError(errorSummary, this);
+				// delete the error summary:
+				errorSummary = null;
 			}catch(IOException ioe){
 				getLogger().logJob(LogLevel.ERROR, this, "CLEAR_RESOURCES", "Impossible to delete the file associated with the error '" + errorSummary.message + "' of the job \"" + jobId + "\"!", ioe);
 			}
 		}
 
-		getLogger().logJob(LogLevel.INFO, this, "CLEAR_RESOURCES", "Resources associated with the job \"" + getJobId() + "\" have been successfully freed.", null);
+		getLogger().logJob(LogLevel.INFO, this, "CLEAR_RESOURCES", (fullClean ? "All resources" : "Threads and results") + " associated with the job \"" + getJobId() + "\" have been successfully freed.", null);
 	}
 
 	/* ******************* */
@@ -1586,7 +1775,7 @@ public class UWSJob extends SerializableUWSObject {
 	 */
 	public final void notifyObservers(ExecutionPhase oldPhase){
 		String errors = null;
-		
+
 		for(JobObserver observer : observers){
 			// Update this observer:
 			try{

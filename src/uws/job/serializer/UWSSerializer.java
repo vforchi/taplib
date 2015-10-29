@@ -152,6 +152,9 @@ public abstract class UWSSerializer implements Serializable {
 				throw new UWSException(UWSException.SEE_OTHER, job.getErrorSummary().getDetails().toString());
 			else
 				return getErrorSummary(job.getErrorSummary(), root);
+		// JOB INFO:
+		else if (firstAttribute.equalsIgnoreCase(UWSJob.PARAM_JOB_INFO))
+			return getJobInfoList(job, root);
 		// OTHERS:
 		else
 			throw new UWSException(UWSException.NOT_FOUND, "No job attribute named \"" + firstAttribute + "\" in the job \"" + job.getJobId() + "\"!");
@@ -452,4 +455,19 @@ public abstract class UWSSerializer implements Serializable {
 	 * @throws Exception	If there is an error during the serialization.
 	 */
 	public abstract String getAdditionalParameter(final String paramName, final Object paramValue, final boolean root) throws Exception;
+
+	/**
+	 * Serializes the list of all job information associated with the given job.
+	 * 
+	 * @param job			The job whose the job information must be serialized.
+	 * @param root			<i>false</i> if the job information list to serialize will be included
+	 *            			in a top level serialization (for a list of parameters: job), <i>true</i> otherwise.
+	 * 
+	 * @return				The serialization of the list of all job information.
+	 * 
+	 * @throws Exception	If there is an error during the serialization.
+	 * 
+	 * @since 4.2
+	 */
+	public abstract String getJobInfoList(final UWSJob job, final boolean root) throws Exception;
 }

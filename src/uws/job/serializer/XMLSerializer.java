@@ -22,7 +22,10 @@ package uws.job.serializer;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.Map;
 
 import uws.ISO8601Format;
 import uws.job.ErrorSummary;
@@ -225,6 +228,10 @@ public class XMLSerializer extends UWSSerializer {
 
 		// errorSummary:
 		xml.append(newLine).append(getErrorSummary(job.getErrorSummary(), false));
+
+		// jobInfo:
+		if (job.countJobInfo() > 0)
+			xml.append(newLine).append(getJobInfoList(job, false));
 
 		tabPrefix = "";
 		return xml.append("\n</job>").toString();
@@ -439,6 +446,96 @@ public class XMLSerializer extends UWSSerializer {
 		xml.append(" mime-type=\"").append((result.getMimeType() == null) ? "" : escapeXMLAttribute(result.getMimeType())).append('"');
 
 		return xml.append(" />").toString();
+	}
+
+	@Override
+	public String getJobInfoList(UWSJob job, boolean root){
+		StringBuffer xml = new StringBuffer(root ? getHeader() : "");
+		xml.append(tabPrefix).append("<jobInfo").append(getUWSNamespace(root)).append('>');
+
+		Iterator<Map.Entry<String,Object>> it = job.getJobInfo();
+		String newLine = "\n\t" + tabPrefix;
+		Map.Entry<String,Object> entry;
+		while(it.hasNext()){
+			entry = it.next();
+			if (entry.getValue() == null)
+				continue;
+			xml.append(newLine).append('<').append(entry.getKey()).append('>');
+			xml.append(formatPieceOfJobInfo(entry.getValue(), newLine));
+			xml.append("</").append(entry.getKey()).append('>');
+		}
+		xml.append('\n').append(tabPrefix).append("</jobInfo>");
+		return xml.toString();
+	}
+
+	/**
+	 * <p>Format the given value of piece of job information.</p>
+	 * 
+	 * <p>By default, this function is able to format the given types of object:</p>
+	 * <ul>
+	 * 	<li><b>Date</b>: formatted using the ISO-8601 format.</li>
+	 * 	<li><b>Map.Entry&lt;?,?&gt;</b>: formated as a new XML child where the node name
+	 * 	                                 will be the key and the node content will be the value.</li>
+	 * 	<li><b>Array</b> or <b>Collection&lt;?&gt;</b>: each item is formatted using this function
+	 * 	                                                and they are separated by a new line if they
+	 * 	                                                are Map.Entry&lt;?,?&gt; or a ';' otherwise.</li>
+	 * 	<li><b><i>Other</i></b>: the function toString() is merely called.</li>
+	 * </ul>
+	 * 
+	 * @param value		The value to format.
+	 * @param newLine	The string creating a new line.
+	 * 
+	 * @return			The formated value.
+	 * 
+	 * @since 4.2
+	 */
+	protected String formatPieceOfJobInfo(final Object value, String newLine){
+		if (newLine == null)
+			newLine = "\n\t";
+		else
+			newLine += "\t";
+
+		// CASE: No value => ""
+		if (value == null)
+			return "";
+
+		// CASE: Date => ISO-8601 format
+		else if (value instanceof Date)
+			return ISO8601Format.format((Date)value);
+
+		// CASE MapEntry => <{key}>formatPieceOfJobInfo({value}, newLine)</{key}>
+		else if (value instanceof Map.Entry<?,?>)
+			return "<" + ((Map.Entry<?,?>)value).getKey() + ">" + formatPieceOfJobInfo(((Map.Entry<?,?>)value).getValue(), newLine) + "</" + ((Map.Entry<?,?>)value).getKey() + ">";
+
+		// CASE: Array => one item per line if MapEntry, otherwise concatenation with ';'
+		else if (value.getClass().isArray()){
+			StringBuffer buf = new StringBuffer();
+			for(Object o : (Object[])value){
+				if (o == null)
+					continue;
+				else if (o instanceof Map.Entry<?,?>)
+					buf.append(newLine);
+				else if (buf.length() != 0)
+					buf.append(';');
+				buf.append(formatPieceOfJobInfo(o, newLine));
+			}
+			return buf.toString();
+		}
+		// CASE: Collection => one item per line if MapEntry, otherwise concatenation with ';'
+		else if (value instanceof Collection<?>){
+			StringBuffer buf = new StringBuffer();
+			for(Object o : (Collection<?>)value){
+				if (o == null)
+					continue;
+				else if (buf.length() != 0 && !(o instanceof Map.Entry<?,?>))
+					buf.append(';');
+				buf.append(formatPieceOfJobInfo(o, newLine));
+			}
+			return buf.toString();
+		}
+		// DEFAULT: toString()
+		else
+			return value.toString();
 	}
 
 	/* ************** */

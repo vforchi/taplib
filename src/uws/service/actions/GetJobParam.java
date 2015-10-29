@@ -16,7 +16,7 @@ package uws.service.actions;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012,2014 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -50,7 +50,7 @@ import uws.service.request.UploadFile;
  * The serializer is choosen in function of the HTTP Accept header.</p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.1 (09/2014)
+ * @version 4.2 (10/2015)
  */
 public class GetJobParam extends UWSAction {
 	private static final long serialVersionUID = 1L;
@@ -120,6 +120,8 @@ public class GetJobParam extends UWSAction {
 				InputStream input = null;
 				try{
 					input = uws.getFileManager().getResultInput(result, job);
+					if (input == null)
+						throw new UWSException(UWSException.NOT_FOUND, "No result identified with \"" + attributes[1] + "\" in the job \"" + job.getJobId() + "\"!");
 					UWSToolBox.write(input, result.getMimeType(), result.getSize(), response);
 				}catch(IOException ioe){
 					getLogger().logUWS(LogLevel.ERROR, result, "GET_RESULT", "Can not read the content of the result \"" + result.getId() + "\" of the job \"" + job.getJobId() + "\"!", ioe);
@@ -138,6 +140,8 @@ public class GetJobParam extends UWSAction {
 				InputStream input = null;
 				try{
 					input = uws.getFileManager().getErrorInput(error, job);
+					if (input == null)
+						throw new UWSException(UWSException.NOT_FOUND, "No error summary for the job \"" + job.getJobId() + "\"!");
 					UWSToolBox.write(input, getUWS().getErrorWriter().getErrorDetailsMIMEType(), uws.getFileManager().getErrorSize(error, job), response);
 				}catch(IOException ioe){
 					getLogger().logUWS(LogLevel.ERROR, error, "GET_ERROR", "Can not read the details of the error summary of the job \"" + job.getJobId() + "\"!", ioe);
@@ -156,6 +160,8 @@ public class GetJobParam extends UWSAction {
 				InputStream input = null;
 				try{
 					input = uws.getFileManager().getUploadInput(upl);
+					if (input == null)
+						throw new UWSException(UWSException.NOT_FOUND, "No input file identified with \"" + attributes[1] + "\" in the job \"" + job.getJobId() + "\"!");
 					UWSToolBox.write(input, upl.mimeType, upl.length, response);
 				}catch(IOException ioe){
 					getLogger().logUWS(LogLevel.ERROR, upl, "GET_PARAMETER", "Can not read the content of the uploaded file \"" + upl.paramName + "\" of the job \"" + job.getJobId() + "\"!", ioe);
@@ -171,7 +177,7 @@ public class GetJobParam extends UWSAction {
 			UWSSerializer serializer = uws.getSerializer(request.getHeader("Accept"));
 			String uwsField = attributes[0];
 			boolean jobSerialization = false;
-			if (uwsField == null || uwsField.trim().isEmpty() || (attributes.length <= 1 && (uwsField.equalsIgnoreCase(UWSJob.PARAM_ERROR_SUMMARY) || uwsField.equalsIgnoreCase(UWSJob.PARAM_RESULTS) || uwsField.equalsIgnoreCase(UWSJob.PARAM_PARAMETERS)))){
+			if (uwsField == null || uwsField.trim().isEmpty() || (attributes.length <= 1 && (uwsField.equalsIgnoreCase(UWSJob.PARAM_ERROR_SUMMARY) || uwsField.equalsIgnoreCase(UWSJob.PARAM_RESULTS) || uwsField.equalsIgnoreCase(UWSJob.PARAM_PARAMETERS) || uwsField.equalsIgnoreCase(UWSJob.PARAM_JOB_INFO)))){
 				response.setContentType(serializer.getMimeType());
 				jobSerialization = true;
 			}else
