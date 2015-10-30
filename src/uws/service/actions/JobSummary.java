@@ -135,13 +135,17 @@ public class JobSummary extends UWSAction {
 	 * <ul>
 	 * 	<li><b>WAIT</b>: <i>[MANDATORY]</i> with a value (in seconds). The value must be a positive and not null integer expressing a duration in seconds
 	 * 	                 or -1 (or any other negative value) for an infinite time. If a not legal value or no value is provided, the parameter will be
-	 * 	                 ignored and no blocking will be performed.<br/>
-	 * 	                 This parameter raises a flag meaning a blocking is required and eventually a time (in seconds) to wait before stop blocking.</li>
+	 * 	                 merely ignored.<br/>
+	 * 	                 This parameter raises a flag meaning a blocking is required (except if 0 is provided) and eventually a time (in seconds)
+	 * 	                 to wait before stop blocking.<br/>
+	 * 	                 If several values are provided, only the one meaning the smallest blocking waiting time will be kept. Particularly if both a negative
+	 * 	                 and a positive or null value are given, only the positive or null value will be kept.</li>
 	 * 
 	 * 	<li><b>PHASE</b>: <i>[OPTIONAL]</i> A legal execution phase must be provided, otherwise this parameter will be ignored.<br/>
 	 * 	                  This parameter indicates the phase in which the job must be at the time the blocking is required. If the current job phase is different
 	 * 	                  from the specified one, no blocking will be performed. Note that the allowed phases are PENDING, QUEUED and EXECUTING, because only a job
-	 * 	                  in one of these phases can be blocked.</li>
+	 * 	                  in one of these phases can be blocked.<br/>
+	 * 	                  If several values are provided, only the last occurrence is kept.</li>
 	 * </ul>
 	 * 
 	 * <p><i>Note:
@@ -172,8 +176,10 @@ public class JobSummary extends UWSAction {
 		if (job.getPhase() != ExecutionPhase.PENDING && job.getPhase() != ExecutionPhase.QUEUED && job.getPhase() != ExecutionPhase.EXECUTING)
 			return;
 
-		/* Extract the parameters WAIT and PHASE (only the last legal occurrence is taken into account) */
+		/* Extract the parameters WAIT (only the smallest waiting time is taken into account)
+		 *                    and PHASE (only the last legal occurrence is taken into account) */
 		ExecutionPhase phase = null;
+		boolean waitGiven = false;
 		long waitingTime = 0;
 		String param;
 		String[] values;
@@ -182,17 +188,18 @@ public class JobSummary extends UWSAction {
 			param = parameters.nextElement();
 			values = req.getParameterValues(param);
 			if (param.toUpperCase().equals("WAIT")){
-				/* note: a value MUST be given for a WAIT parameter ; if it is missing no blocking will occur */
-				if (values == null || values.length == 0)
-					waitingTime = 0;
-				else{
-					for(int i = values.length - 1; waitingTime == 0 && i >= 0; i--){
+				/* note: a value MUST be given for a WAIT parameter ; if it is missing the parameter is ignored */
+				if (values != null){
+					for(int i = 0; i < values.length; i++){
 						try{
-							/* note: a value MUST be given for a WAIT parameter ; if it is missing no blocking will occur */
-							if (values[i].trim().length() == 0)
-								waitingTime = 0;
-							else
-								waitingTime = Long.parseLong(values[i]);
+							if (values[i] != null && values[i].trim().length() > 0){
+								long tmp = Long.parseLong(values[i]);
+								if (tmp < 0 && !waitGiven)
+									waitingTime = tmp;
+								else if (tmp >= 0)
+									waitingTime = (waitGiven && waitingTime >= 0) ? Math.min(waitingTime, tmp) : tmp;
+								waitGiven = true;
+							}
 						}catch(NumberFormatException nfe){}
 					}
 				}

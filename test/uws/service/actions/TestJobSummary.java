@@ -157,7 +157,7 @@ public class TestJobSummary {
 
 		// With several WAIT and PHASE parameters:
 		waitingDuration = 2;
-		req.addParams("WAIT", "" + waitingDuration);
+		req.addParams("wait", "" + waitingDuration);
 		req.addParams("PHASE", "PENDING");
 		activePhases = new ExecutionPhase[]{ExecutionPhase.EXECUTING,ExecutionPhase.QUEUED};
 		for(ExecutionPhase p : activePhases){
@@ -181,7 +181,23 @@ public class TestJobSummary {
 		t.start();
 		waitFor(t);
 		assertFalse(t.isAlive());
-		assertEquals(waitingDuration, t.getTime());
+		assertEquals(1, t.getTime());
+
+		// With several WAIT parameters, including a negative one:
+		req.clearParams();
+		req.addParams("Wait", "-10");
+		req.addParams("wait", "1");
+		req.addParams("WAIT", "5");
+		try{
+			job.setPhase(ExecutionPhase.PENDING, true);
+		}catch(UWSException ue){
+			fail("No error should occur when forcing a phase modification!");
+		}
+		t = new TestThread(null, req, job, null);
+		t.start();
+		waitFor(t);
+		assertFalse(t.isAlive());
+		assertEquals(1, t.getTime());
 
 		/* ********************** */
 		/* WITH A BLOCKING POLICY */
