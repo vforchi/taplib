@@ -84,7 +84,7 @@ import uws.service.wait.BlockingPolicy;
  * <h3>UWS Definition</h3>
  * <p>
  * 	To create a such servlet, you have to extend this class. Once done, only two functions must be
- * 	implemented: {@link #createJob(Map, JobOwner)} and {@link #initUWS()}.
+ * 	implemented: {@link #createJob(HttpServletRequest, JobOwner)} and {@link #initUWS()}.
  * </p>
  * <p>
  * 	The first one will be called by the library each time a job must be created. All the job parameters
@@ -117,12 +117,12 @@ import uws.service.wait.BlockingPolicy;
  * 	These functions are:
  * </p>
  * <ul>
- * 	<li>{@link #doAddJob(HttpServletRequest, HttpServletResponse, JobOwner)}</li>
- * 	<li>{@link #doDestroyJob(HttpServletRequest, HttpServletResponse, JobOwner)}</li>
- * 	<li>{@link #doGetJobParam(HttpServletRequest, HttpServletResponse, JobOwner)}</li>
- * 	<li>{@link #doJobSummary(HttpServletRequest, HttpServletResponse, JobOwner)}</li>
- * 	<li>{@link #doListJob(HttpServletRequest, HttpServletResponse, JobOwner)}</li>
- * 	<li>{@link #doSetJobParam(HttpServletRequest, HttpServletResponse, JobOwner)}</li>
+ * 	<li>{@link #doAddJob(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}</li>
+ * 	<li>{@link #doDestroyJob(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}</li>
+ * 	<li>{@link #doGetJobParam(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}</li>
+ * 	<li>{@link #doJobSummary(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}</li>
+ * 	<li>{@link #doListJob(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}</li>
+ * 	<li>{@link #doSetJobParam(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}</li>
  * </ul>
  * <p>
  * 	They are all already implemented following their definition in the IVOA document. However,
@@ -807,10 +807,10 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * @param response		The response in which the error must be published.
 	 * 
 	 * @throws IOException	If there is an error when calling {@link #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse)} or {@link HttpServletResponse#sendError(int, String)}.
-	 * @throws UWSException	If there is an error when calling {@link #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse))}.
+	 * @throws UWSException	If there is an error when calling {@link #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse)}.
 	 * 
 	 * @see #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse)
-	 * @see {@link ServiceErrorWriter#writeError(Throwable, HttpServletResponse, HttpServletRequest, JobOwner, String)}
+	 * @see #sendError(Throwable, HttpServletRequest, String, JobOwner, String, HttpServletResponse)
 	 */
 	public final void sendError(UWSException error, HttpServletRequest request, String reqID, JobOwner user, String uwsAction, HttpServletResponse response) throws ServletException{
 		if (error.getHttpErrorCode() == UWSException.SEE_OTHER){
@@ -846,7 +846,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * @throws IOException	If there is an error when calling {@link HttpServletResponse#sendError(int, String)}.
 	 * @throws UWSException
 	 * 
-	 * @see {@link ServiceErrorWriter#writeError(Throwable, HttpServletResponse, HttpServletRequest, String, JobOwner, String)}
+	 * @see ServiceErrorWriter#writeError(Throwable, HttpServletResponse, HttpServletRequest, String, JobOwner, String)
 	 */
 	public final void sendError(Throwable error, HttpServletRequest request, String reqID, JobOwner user, String uwsAction, HttpServletResponse response) throws ServletException{
 		try{
@@ -1134,7 +1134,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * @return	<i>true</i> if the given jobs list has been destroyed, <i>false</i> otherwise.
 	 * 
 	 * @see JobList#clear()
-	 * @see JobList#setUWS(AbstractUWS)
+	 * @see JobList#setUWS(UWS)
 	 */
 	public boolean destroyJobList(JobList jl){
 		if (jl == null)
@@ -1291,7 +1291,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	/**
 	 * Sets the UWS URL interpreter to use in this UWS.
 	 * 
-	 * @param urlInterpreter	Its new UWS URL interpreter (may be <i>null</i>. In this case, it will be created from the next request ; see {@link #executeRequest(HttpServletRequest, HttpServletResponse)}).
+	 * @param urlInterpreter	Its new UWS URL interpreter (may be <i>null</i>. In this case, it will be created at the next request.).
 	 */
 	public final void setUrlInterpreter(UWSUrl urlInterpreter){
 		this.urlInterpreter = urlInterpreter;

@@ -84,7 +84,7 @@ import uws.service.log.UWSLog.LogLevel;
  * <h3>Execution management</h3>
  * 
  * <p>The execution of the jobs of this jobs list is managed by an implementation of {@link ExecutionManager}.
- * {@link DefaultExecutionManager} is used by default, but you can easily set your owne implementation of this interface,
+ * {@link DefaultExecutionManager} is used by default, but you can easily set your own implementation of this interface,
  * either at the job list creation or with {@link #setExecutionManager(ExecutionManager)}.</p>
  * 
  * <h3>Automatic job destruction</h3>
@@ -98,7 +98,7 @@ import uws.service.log.UWSLog.LogLevel;
  * 
  * <p>
  * 	To use a custom destruction manager, you can use the method {@link #setDestructionManager(DestructionManager)}
- * 	if the jobs list is not managed by a UWS or {@link UWSService#setDestructionManager(DestructionManager)} otherwise.
+ * 	if the jobs list is not managed by a UWS.
  * </p>
  * 
  * <h3>Job destruction policy</h3>
@@ -322,7 +322,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * @return A logger.
 	 * 
 	 * @see #getUWS()
-	 * @see UWS#getLogger();
+	 * @see UWS#getLogger()
 	 * @see UWSToolBox#getDefaultLogger()
 	 */
 	public UWSLog getLogger(){
@@ -473,7 +473,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * Gets the job whose the ID is given in parameter ONLY IF it is the one of the specified user OR IF the specified job is owned by an anonymous user.
 	 * 
 	 * @param jobID		ID of the job to get.
-	 * @param userID	ID of the user who asks this job (<i>null</i> means no particular owner => cf {@link #getJob(String)}).
+	 * @param user		User who asks this job (<i>null</i> means no particular owner => cf {@link #getJob(String)}).
 	 * 
 	 * @return			The requested job or <i>null</i> if there is no job with the given ID or if the user is not allowed to get the given job.
 	 * 
@@ -510,7 +510,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	/**
 	 * Gets an iterator on the jobs list of the specified user.
 	 * 
-	 * @param ownerId	The ID of the owner/user (may be <i>null</i>).
+	 * @param user		The owner/user (may be <i>null</i>).
 	 * 
 	 * @return 			An iterator on all jobs which have been created by the specified owner/user
 	 * 					or a NullIterator if the specified owner/user has no job
@@ -631,7 +631,6 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	 * 
 	 * @throws UWSException If the owner of the given job is not allowed to add any job into this jobs list.
 	 * 
-	 * @see UWSJob#loadAdditionalParams()
 	 * @see UWSJob#setJobList(JobList)
 	 * @see UWSService#getBackupManager()
 	 * @see UWSBackupManager#saveOwner(JobOwner)
@@ -882,7 +881,7 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 	/**
 	 * Destroys all jobs owned by the specified user.
 	 * 
-	 * @param ownerId The ID of the owner/user.
+	 * @param owner	The owner/user.
 	 * 
 	 * @throws UWSException	If the given user is not allowed to update of the content of this jobs list.
 	 * 
@@ -906,19 +905,19 @@ public class JobList extends SerializableUWSObject implements Iterable<UWSJob> {
 
 	/**
 	 * Serializes the while object in the given output stream,
-	 * considering the given owner ID, the given user filters
+	 * considering the given user, the given user filters
 	 * and thanks to the given serializer.
 	 * 
 	 * @param output		The ouput stream in which this object must be serialized.
 	 * @param serializer	The serializer to use.
-	 * @param ownerId		The ID of the current ID.
+	 * @param owner			The user/owner who asks for the serialization.
 	 * @param filter		Represent all the specified job filters.
 	 * 
 	 * @throws UWSException		If the owner is not allowed to see the content of the serializable object.
 	 * @throws IOException		If there is an error while writing in the given stream. 
 	 * @throws Exception		If there is any other error during the serialization.
 	 * 
-	 * @see UWSSerializer#getJobList(JobList, JobOwner, ExecutionPhase[], boolean)
+	 * @see UWSSerializer#getJobList(JobList, JobOwner, JobListFilter, boolean)
 	 * 
 	 * @since 4.2
 	 */

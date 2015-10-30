@@ -28,7 +28,7 @@ import uws.job.UWSJob;
  * @version 4.2 (10/2015)
  * @since 4.2
  * 
- * @see JobFilters
+ * @see JobListFilter
  */
 public interface JobFilter {
 
@@ -45,5 +45,5 @@ public interface JobFilter {
 	 * @return	<code>true</code> if the job matches this filter, <code>false</code> otherwise.
 	 */
 	public boolean match(final UWSJob job);
-	
+
 }

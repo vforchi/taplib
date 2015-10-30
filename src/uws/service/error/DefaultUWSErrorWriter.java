@@ -154,7 +154,7 @@ public class DefaultUWSErrorWriter implements ServiceErrorWriter {
 	 * <p>The format is chosen thanks to the Accept header of the HTTP request.
 	 * If unknown, the HTML output is chosen.</p>
 	 * 
-	 * @param t					Exception to format and to write.
+	 * @param message			Error message to write.
 	 * @param type				Type of the error: FATAL or TRANSIENT.
 	 * @param httpErrorCode		HTTP error code (i.e. 404, 500).
 	 * @param reqID				ID of the request at the origin of the specified error.
@@ -163,10 +163,10 @@ public class DefaultUWSErrorWriter implements ServiceErrorWriter {
 	 * @param response			Response in which the error must be written.
 	 * @param acceptHeader		Value of the header named "Accept" (which lists all allowed response format).
 	 * 
-	 * @throws IOException		If there is an error while writing the given exception.
+	 * @throws IOException		If there is an error while writing the given error.
 	 * 
-	 * @see #formatHTMLError(Throwable, boolean, ErrorType, int, String, JobOwner, HttpServletResponse)
-	 * @see #formatJSONError(Throwable, boolean, ErrorType, int, String, JobOwner, HttpServletResponse)
+	 * @see #formatHTMLError(String, ErrorType, int, String, String, JobOwner, HttpServletResponse)
+	 * @see #formatJSONError(String, ErrorType, int, String, String, JobOwner, HttpServletResponse)
 	 */
 	protected void formatError(final String message, final ErrorType type, final int httpErrorCode, final String reqID, final String action, final JobOwner user, final HttpServletResponse response, final String acceptHeader) throws IOException{
 		// Reset the whole response to ensure the output stream is free:
@@ -185,7 +185,7 @@ public class DefaultUWSErrorWriter implements ServiceErrorWriter {
 	 * <p>Formats and writes the given error in the HTTP servlet response.</p>
 	 * <p>A full HTML response is printed with: the HTTP error code, the error type, the name of the exception, the message and the full stack trace.</p>
 	 * 
-	 * @param t					Exception to format and to write.
+	 * @param message			Error message to write.
 	 * @param type				Type of the error: FATAL or TRANSIENT.
 	 * @param httpErrorCode		HTTP error code (i.e. 404, 500).
 	 * @param reqID				ID of the request at the origin of the specified error.
@@ -193,7 +193,7 @@ public class DefaultUWSErrorWriter implements ServiceErrorWriter {
 	 * @param user				User which is at the origin of the request/action which generates the error.
 	 * @param response			Response in which the error must be written.
 	 * 
-	 * @throws IOException		If there is an error while writing the given exception.
+	 * @throws IOException		If there is an error while writing the given error.
 	 */
 	protected void formatHTMLError(final String message, final ErrorType type, final int httpErrorCode, final String reqID, final String action, final JobOwner user, final HttpServletResponse response) throws IOException{
 		// Erase anything written previously in the HTTP response:
@@ -245,7 +245,7 @@ public class DefaultUWSErrorWriter implements ServiceErrorWriter {
 	 * <p>Formats and writes the given error in the HTTP servlet response.</p>
 	 * <p>A JSON response is printed with: the HTTP error code, the error type, the name of the exception, the message and the list of all causes' message.</p>
 	 * 
-	 * @param t					Exception to format and to write.
+	 * @param message			Error message to write.
 	 * @param type				Type of the error: FATAL or TRANSIENT.
 	 * @param httpErrorCode		HTTP error code (i.e. 404, 500).
 	 * @param reqID				ID of the request at the origin of the specified error.
@@ -253,7 +253,7 @@ public class DefaultUWSErrorWriter implements ServiceErrorWriter {
 	 * @param user				User which is at the origin of the request/action which generates the error.
 	 * @param response			Response in which the error must be written.
 	 * 
-	 * @throws IOException		If there is an error while writing the given exception.
+	 * @throws IOException		If there is an error while writing the given error.
 	 */
 	protected void formatJSONError(final String message, final ErrorType type, final int httpErrorCode, final String reqID, final String action, final JobOwner user, final HttpServletResponse response) throws IOException{
 		// Erase anything written previously in the HTTP response:

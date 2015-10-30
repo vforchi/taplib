@@ -246,7 +246,7 @@ public class Result extends SerializableUWSObject {
 	/**
 	 * Sets the size of the corresponding result file.
 	 * 
-	 * @return size	Result file size (in bytes).
+	 * @param size	Result file size (in bytes).
 	 */
 	public final void setSize(long size){
 		this.size = size;

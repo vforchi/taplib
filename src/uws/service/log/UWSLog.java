@@ -210,7 +210,7 @@ public interface UWSLog {
 	 * 
 	 * <p><i>Note:
 	 * 	When a request is received, this function is called, and then, when the response has been written and sent to the client,
-	 * 	{@link #logHttp(LogLevel, HttpServletResponse, String, Throwable)} should be called.
+	 * 	{@link #logHttp(LogLevel, HttpServletRequest, String, String, Throwable)} should be called.
 	 * 	These functions should always work together.
 	 * </i></p>
 	 * 
@@ -219,8 +219,6 @@ public interface UWSLog {
 	 * @param requestId	ID to use to identify this request until its response is sent.
 	 * @param message	Message to log. <i>MAY be NULL</i>
 	 * @param error		Error/Exception to log. <i>MAY be NULL</i>
-	 * 
-	 * @see #logHttp(LogLevel, HttpServletResponse, String, Throwable)
 	 * 
 	 * @since 4.1
 	 */
@@ -231,7 +229,7 @@ public interface UWSLog {
 	 * This log function is called when a response is sent to the client by the service. Consequently, the event is: RESPONSE_SENT.</p>
 	 * 
 	 * <p><i>Note:
-	 * 	When a request is received, {@link #logHttp(LogLevel, HttpServletRequest, String, Throwable)} is called, and then,
+	 * 	When a request is received, {@link #logHttp(LogLevel, HttpServletResponse, String, JobOwner, String, Throwable)} is called, and then,
 	 * 	when the response has been written and sent to the client, this function should be called.
 	 * 	These functions should always work together.
 	 * </i></p>
@@ -242,8 +240,6 @@ public interface UWSLog {
 	 * @param user		Identified user which has sent the received request.
 	 * @param message	Message to log. <i>MAY be NULL</i>
 	 * @param error		Error/Exception to log. <i>MAY be NULL</i>
-	 * 
-	 * @see #logHttp(LogLevel, HttpServletRequest, String, Throwable)
 	 * 
 	 * @since 4.1
 	 */

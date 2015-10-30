@@ -75,7 +75,7 @@ public abstract class JobThread extends Thread {
 	/** The last error which has occurred during the execution of this thread. */
 	protected UWSException lastError = null;
 
-	/** Indicates whether the {@link UWSJob#jobWork()} has been called and finished, or not. */
+	/** Indicates whether the {@link #jobWork()} has been called and finished, or not. */
 	protected boolean finished = false;
 
 	/** Description of what is done by this thread. */
@@ -204,7 +204,7 @@ public abstract class JobThread extends Thread {
 	}
 
 	/**
-	 * Indicates whether the {@link UWSJob#jobWork()} method has been called or not.
+	 * Indicates whether the {@link #jobWork()} method has been called or not.
 	 * 
 	 * @return	<i>true</i> if the job work is done, <i>false</i> otherwise.
 	 */
@@ -235,7 +235,7 @@ public abstract class JobThread extends Thread {
 	 * 
 	 * @throws UWSException	If there is an error while publishing the error.
 	 * 
-	 * @see {@link UWSJob#error(ErrorSummary)}
+	 * @see UWSJob#error(ErrorSummary)
 	 */
 	public void setError(final ErrorSummary error) throws UWSException{
 		job.error(error);
@@ -256,8 +256,8 @@ public abstract class JobThread extends Thread {
 	 * 
 	 * @throws UWSException		If there is an error while publishing the given exception.
 	 * 
-	 * {@link ServiceErrorWriter#writeError(UWSJob, Throwable, String, ErrorType, OutputStream)}
-	 * {@link UWSToolBox#writeErrorFile(Exception, ErrorSummary, UWSJob, OutputStream)}
+	 * @see ServiceErrorWriter#writeError(Throwable, ErrorSummary, UWSJob, OutputStream)
+	 * @see UWSToolBox#writeErrorFile(Exception, ErrorSummary, UWSJob, OutputStream)
 	 */
 	public void setError(final UWSException ue) throws UWSException{
 		if (ue == null)
@@ -290,8 +290,6 @@ public abstract class JobThread extends Thread {
 	/**
 	 * Creates a default result description.
 	 * 
-	 * @param job	The job which will contains this result.
-	 * 
 	 * @return		The created result.
 	 * 
 	 * @see #createResult(String)
@@ -311,9 +309,8 @@ public abstract class JobThread extends Thread {
 	}
 
 	/**
-	 * Creates a default result description but by precising its name/ID.
+	 * Creates a default result description but with the given name/ID.
 	 * 
-	 * @param job	The job which will contains this result.
 	 * @param name	The name/ID of the result to create.
 	 * 
 	 * @return		The created result.
@@ -362,7 +359,7 @@ public abstract class JobThread extends Thread {
 	 * 
 	 * @throws IOException	If there is an error while getting the result file size.
 	 * 
-	 * @see {@link UWSFileManager#getResultSize(Result, UWSJob)}
+	 * @see UWSFileManager#getResultSize(Result, UWSJob)
 	 */
 	public long getResultSize(final Result result) throws IOException{
 		return getFileManager().getResultSize(result, job);
@@ -375,14 +372,14 @@ public abstract class JobThread extends Thread {
 	 * <ul>
 	 * 	<li>This method does the job work but it MUST also fill the associated job with the execution results and/or errors.</li>
 	 * 	<li>Do not forget to check the interrupted flag of the thread ({@link Thread#isInterrupted()}) and then to send an {@link InterruptedException}.
-	 * 		Otherwise the {@link UWSJob#stop()} method will have no effect, as for {@link #abort()} and {@link #error(ErrorSummary)}.</li>
+	 * 		Otherwise the {@link UWSJob#stop()} method will have no effect, as for {@link UWSJob#abort()} and {@link #setError(ErrorSummary)}.</li>
 	 * </ul></b></p>
 	 * 
 	 * <p><i><u>Notes</u>:
 	 * <ul>
 	 * 	<li>The "setPhase(COMPLETED)" and the "endTime=new Date()" are automatically applied just after the call to jobWork.</li>
 	 * 	<li>If an {@link UWSException} is thrown the {@link JobThread} will automatically publish the exception in this job
-	 * 		thanks to the {@link UWSJob#error(UWSException)} method or the {@link #setErrorSummary(ErrorSummary)} method,
+	 * 		thanks to the {@link #setError(UWSException)} method or the {@link #setError(ErrorSummary)} method,
 	 * 		and so it will set its phase to {@link ExecutionPhase#ERROR}.</li>
 	 * 	<li>If an {@link InterruptedException} is thrown the {@link JobThread} will automatically set the phase to {@link ExecutionPhase#ABORTED}</li>
 	 * </ul></i></p>
@@ -395,7 +392,7 @@ public abstract class JobThread extends Thread {
 	/**
 	 * <ol>
 	 * 	<li>Tests the execution phase of the job: if not {@link ExecutionPhase#EXECUTING EXECUTING}, nothing is done...the thread ends immediately.</li>
-	 * 	<li>Calls the {@link UWSJob#jobWork()} method.</li>
+	 * 	<li>Calls the {@link #jobWork()} method.</li>
 	 * 	<li>Sets the <i>finished</i> flag to <i>true</i>.</li>
 	 * 	<li>Changes the job phase to {@link ExecutionPhase#COMPLETED COMPLETED} if not interrupted, else {@link ExecutionPhase#ABORTED ABORTED}.
 	 * </ol>
@@ -404,10 +401,10 @@ public abstract class JobThread extends Thread {
 	 * is set to {@link ExecutionPhase#ERROR ERROR} and an error  summary is created.</P>
 	 * <P>Whatever is the exception, it will always be available thanks to the {@link JobThread#getError()} after execution.</P>
 	 * 
-	 * @see UWSJob#jobWork()
-	 * @see UWSJob#setPhase(ExecutionPhase)
-	 * @see UWSJob#publishExecutionError(UWSException)
-	 * @see UWSToolBox#publishErrorSummary(UWSJob, String, ErrorType)
+	 * @see #jobWork()
+	 * @see UWSJob#abort()
+	 * @see #setError(ErrorSummary)
+	 * @see #setError(UWSException)
 	 */
 	@Override
 	public final void run(){

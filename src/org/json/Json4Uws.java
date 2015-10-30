@@ -26,7 +26,6 @@ import java.util.Map;
 
 import uws.ISO8601Format;
 import uws.job.ErrorSummary;
-import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
@@ -82,7 +81,7 @@ public final class Json4Uws {
 	 * @param owner				The user who asks to serialize the given jobs list. (MAY BE NULL)
 	 * @return					Its JSON representation.
 	 * @throws JSONException	If there is an error while building the JSON object.
-	 * @see #getJson(JobList, JobOwner, ExecutionPhase[])
+	 * @see #getJson(JobList, JobOwner, JobListFilter)
 	 */
 	public final static JSONObject getJson(final JobList jobsList, final JobOwner owner) throws JSONException{
 		return getJson(jobsList, owner, null);
@@ -270,9 +269,9 @@ public final class Json4Uws {
 
 	/**
 	 * Gets the JSON representation of the given list of job information.
-	 * @param error				The job information to represent in JSON.
+	 * @param	jobInfo			The job information to represent in JSON.
 	 * @return					Its JSON representation.
-	 * @throws JSONException	If there is an error while building the JSON object.
+	 * @throws	JSONException	If there is an error while building the JSON object.
 	 * @since 4.2
 	 */
 	public final static JSONObject getJson(final Iterator<Map.Entry<String,Object>> jobInfo) throws JSONException{

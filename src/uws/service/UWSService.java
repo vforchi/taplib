@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Vector;
 
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -36,11 +37,8 @@ import uws.AcceptHeader;
 import uws.UWSException;
 import uws.UWSToolBox;
 import uws.job.ErrorType;
-import uws.job.ExecutionPhase;
 import uws.job.JobList;
 import uws.job.JobThread;
-import uws.job.UWSJob;
-import uws.job.manager.DefaultExecutionManager;
 import uws.job.serializer.JSONSerializer;
 import uws.job.serializer.UWSSerializer;
 import uws.job.serializer.XMLSerializer;
@@ -67,7 +65,7 @@ import uws.service.wait.BlockingPolicy;
 /**
  * <h3>General description</h3>
  * 
- * <p>An abstract facility to implement the <b>U</b>niversal <b>W</b>orker <b>S</b>ervice pattern.</p>
+ * <p>A {@link UWS} implementation which aims to interact with an {@link HttpServlet} on the contrary to {@link UWSServlet} which is a servlet.</p>
  * 
  * <p>It can manage several jobs lists (create new, get and remove).</p>
  * 
@@ -77,7 +75,7 @@ import uws.service.wait.BlockingPolicy;
  * 
  * <h3>The UWS URL interpreter</h3>
  * 
- * <p>Any subclass of {@link UWSService} has one object called the UWS URL interpreter. It is stored in the field {@link #urlInterpreter}.
+ * <p>A {@link UWSService} has one object called the UWS URL interpreter. It is stored in the field {@link #urlInterpreter}.
  * It lets interpreting the URL of any received request. Thus you can know on which jobs list, job and/or job attribute(s)
  * the request applies.</p>
  * 
@@ -87,15 +85,6 @@ import uws.service.wait.BlockingPolicy;
  * 
  * <p>You want to set another base URI or to use a custom URL interpreter, you have to set yourself the interpreter
  * by using the method {@link #setUrlInterpreter(UWSUrl)}.</p>
- * 
- * <h3>Create a job</h3>
- * 
- * <p>The most important abstract function of this class is {@link UWSService#createJob(Map)}. It allows to create an instance
- * of the type of job which is managed by this UWS. The only parameter is a map of a job attributes. It is the same map that
- * take the functions {@link UWSJob#UWSJob(Map)} and {@link UWSJob#addOrUpdateParameters(Map)}.</p>
- * 
- * <p>There are two convenient implementations of this abstract method in {@link BasicUWS} and {@link ExtendedUWS}. These two implementations
- * are based on the Java Reflection.</p>
  * 
  * <h3>UWS actions</h3>
  * 
@@ -111,16 +100,16 @@ import uws.service.wait.BlockingPolicy;
  * 	<li>{@link UWSAction#HOME_PAGE HOME_PAGE}: see the class {@link ShowHomePage}</li>
  * </ul>
  * 
- * <p><b>However you can add your own UWS actions !</b> To do that you just need to implement the abstract class {@link UWSAction}
- * and to call the method {@link #addUWSAction(UWSAction)} with an instance of this implementation.</p>
+ * <p><b>However you can add your own UWS actions!</b> To do that you just need to implement the abstract class {@link UWSAction}
+ * and to call the method {@link #addUWSAction(UWSAction)}.</p>
  * 
- * <p><b><u>IMPORTANT:</u> You must be careful when you override the function {@link UWSAction#match(UWSUrl, String, HttpServletRequest)}
- * so that your test is as precise as possible ! Indeed the order in which the actions of a UWS are evaluated is very important !<br />
+ * <p><b><u>IMPORTANT:</u> You must be careful when you override the function {@link UWSAction#match(UWSUrl, JobOwner, HttpServletRequest)}
+ * so that your test is as precise as possible. Indeed the order in which the actions of a UWS are evaluated is very important.<br />
  * <u>If you want to be sure your custom UWS action is always evaluated before any other UWS action you can use the function
- * {@link #addUWSAction(int, UWSAction)} with 0 as first parameter !</u></b></p>
+ * {@link #addUWSAction(int, UWSAction)} with 0 as first parameter.</u></b></p>
  * 
  * <p><i><u>Note:</u> You can also replace an existing UWS action thanks to the method {@link #replaceUWSAction(UWSAction)} or
- * {@link #setUWSAction(int, UWSAction)} !</i></p>
+ * {@link #setUWSAction(int, UWSAction)}.</i></p>
  * 
  * <h3>User identification</h3>
  * 
@@ -138,21 +127,6 @@ import uws.service.wait.BlockingPolicy;
  *		</ul>
  * 	</i></p>
  * </p>
- * 
- * <h3>Queue management</h3>
- * 
- * <p>One of the goals of a UWS is to manage an execution queue for all managed jobs. This task is given to an instance
- * of {@link DefaultExecutionManager}, stored in the field {@link #executionManager}. Each time a job is created,
- * the UWS sets it the execution manager (see {@link AddJob}). Thus the {@link UWSJob#start()} method will ask to the manager
- * whether it can execute now or whether it must be put in a {@link ExecutionPhase#QUEUED QUEUED} phase until enough resources are available for its execution.</p>
- * 
- * <p>By extending the class {@link DefaultExecutionManager} and by overriding {@link DefaultExecutionManager#isReadyForExecution(UWSJob)}
- * you can change the condition which puts a job in the {@link ExecutionPhase#EXECUTING EXECUTING} or in the {@link ExecutionPhase#QUEUED QUEUED} phase. By default, a job is put
- * in the {@link ExecutionPhase#QUEUED QUEUED} phase if there are more running jobs than a given number.</p>
- * 
- * <p>With this manager it is also possible to list all running jobs in addition of all queued jobs, thanks to the methods:
- * {@link DefaultExecutionManager#getRunningJobs()}, {@link DefaultExecutionManager#getQueuedJobs()}, {@link DefaultExecutionManager#getNbRunningJobs()}
- * and {@link DefaultExecutionManager#getNbQueuedJobs()}.</p>
  * 
  * <h3>Serializers & MIME types</h3>
  * 
@@ -176,14 +150,14 @@ import uws.service.wait.BlockingPolicy;
  * 
  * <h3>The UWS Home page</h3>
  * 
- * <p>As for a job or a jobs list, a UWS is also a UWS resource. That's why it can also be serialized !</p>
+ * <p>As for a job or a jobs list, a UWS is also a UWS resource. That's why it can also be serialized.</p>
  * 
  * <p>However in some cases it could more interesting to substitute this resource by a home page of the whole UWS by using the function:
  * {@link #setHomePage(String)} or {@link #setHomePage(URL, boolean)}.
  * </p>
  * 
  * <p><i><u>Note:</u> To go back to the UWS serialization (that is to say to abort a call to {@link #setHomePage(String)}),
- * use the method {@link #setDefaultHomePage()} !</i></p>
+ * use the method {@link #setDefaultHomePage()}.</i></p>
  * 
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
@@ -245,7 +219,7 @@ public class UWSService implements UWS {
 
 	/** Lets writing/formatting any exception/throwable in a HttpServletResponse. */
 	protected ServiceErrorWriter errorWriter;
-	
+
 	/** 
 	 * <p>Strategy to use for the blocking/wait process concerning the {@link JobSummary} action.</p>
 	 * <p><i>If NULL, the standard strategy will be used: wait exactly the time asked by the user
@@ -580,7 +554,7 @@ public class UWSService implements UWS {
 	/**
 	 * <p>
 	 * 	Sets its backup manager.
-	 * 	This manager will be called at each user action to save only its own jobs list by calling {@link UWSBackupManager#saveOwner(String)}.
+	 * 	This manager will be called at each user action to save only its own jobs list by calling {@link UWSBackupManager#saveOwner(JobOwner)}.
 	 * </p>
 	 * 
 	 * @param backupManager Its new backup manager.
@@ -604,7 +578,7 @@ public class UWSService implements UWS {
 	 * 
 	 * @since 4.2
 	 */
-	public final BlockingPolicy getWaitPolicy() {
+	public final BlockingPolicy getWaitPolicy(){
 		return waitPolicy;
 	}
 
@@ -620,7 +594,7 @@ public class UWSService implements UWS {
 	 * 
 	 * @since 4.2
 	 */
-	public final void setWaitPolicy(final BlockingPolicy waitPolicy) {
+	public final void setWaitPolicy(final BlockingPolicy waitPolicy){
 		this.waitPolicy = waitPolicy;
 	}
 
@@ -865,7 +839,7 @@ public class UWSService implements UWS {
 	 * 				<i>false</i> if the given jobs list is <i>null</i> or if a jobs list with this name already exists
 	 * 				or if a UWS is already associated with another UWS.
 	 * 
-	 * @see JobList#setUWS(AbstractUWS)
+	 * @see JobList#setUWS(UWS)
 	 * @see UWS#addJobList(JobList)
 	 */
 	@Override
@@ -899,7 +873,7 @@ public class UWSService implements UWS {
 	 * @return	<i>true</i> if the given jobs list has been destroyed, <i>false</i> otherwise.
 	 * 
 	 * @see JobList#clear()
-	 * @see JobList#setUWS(UWSService)
+	 * @see JobList#setUWS(UWS)
 	 */
 	public boolean destroyJobList(JobList jl){
 		if (jl == null)
@@ -935,7 +909,7 @@ public class UWSService implements UWS {
 	 * <p>Lets adding the given action to this UWS.</p>
 	 * 
 	 * <p><b><u>WARNING:</u> The action will be added at the end of the actions list of this UWS. That means, it will be evaluated (call of
-	 * the method {@link UWSAction#match(UWSUrl, String, HttpServletRequest)}) lastly !</b></p>
+	 * the method {@link UWSAction#match(UWSUrl, JobOwner, HttpServletRequest)}) lastly !</b></p>
 	 * 
 	 * @param action	The UWS action to add.
 	 * 
@@ -1109,7 +1083,7 @@ public class UWSService implements UWS {
 	 * 	<li>Load the request in the UWS URL interpreter (see {@link UWSUrl#load(HttpServletRequest)})</li>
 	 * 	<li>Extract the user ID (see {@link UserIdentifier#extractUserId(UWSUrl, HttpServletRequest)})</li>
 	 * 	<li>Iterate - in order - on all available actions and apply the first which matches.
-	 * 		(see {@link UWSAction#match(UWSUrl, String, HttpServletRequest)} and {@link UWSAction#apply(UWSUrl, String, HttpServletRequest, HttpServletResponse)})</li>
+	 * 		(see {@link UWSAction#match(UWSUrl, JobOwner, HttpServletRequest)} and {@link UWSAction#apply(UWSUrl, JobOwner, HttpServletRequest, HttpServletResponse)})</li>
 	 * </ol>
 	 * 
 	 * @param request		The UWS request.
@@ -1123,8 +1097,8 @@ public class UWSService implements UWS {
 	 * @see UWSUrl#UWSUrl(HttpServletRequest)
 	 * @see UWSUrl#load(HttpServletRequest)
 	 * @see UserIdentifier#extractUserId(UWSUrl, HttpServletRequest)
-	 * @see UWSAction#match(UWSUrl, String, HttpServletRequest)
-	 * @see UWSAction#apply(UWSUrl, String, HttpServletRequest, HttpServletResponse)
+	 * @see UWSAction#match(UWSUrl, JobOwner, HttpServletRequest)
+	 * @see UWSAction#apply(UWSUrl, JobOwner, HttpServletRequest, HttpServletResponse)
 	 */
 	public boolean executeRequest(HttpServletRequest request, HttpServletResponse response) throws UWSException, IOException{
 		if (request == null || response == null)
@@ -1241,10 +1215,10 @@ public class UWSService implements UWS {
 	 * @param response		The response in which the error must be published.
 	 * 
 	 * @throws IOException	If there is an error when calling {@link #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse)} or {@link HttpServletResponse#sendError(int, String)}.
-	 * @throws UWSException	If there is an error when calling {@link #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse))}.
+	 * @throws UWSException	If there is an error when calling {@link #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse)}.
 	 * 
 	 * @see #redirect(String, HttpServletRequest, JobOwner, String, HttpServletResponse)
-	 * @see {@link ServiceErrorWriter#writeError(Throwable, HttpServletResponse, HttpServletRequest, JobOwner, String)}
+	 * @see #sendError(Exception, HttpServletRequest, String, JobOwner, String, HttpServletResponse)
 	 */
 	public final void sendError(UWSException error, HttpServletRequest request, String reqID, JobOwner user, String uwsAction, HttpServletResponse response) throws IOException, UWSException{
 		if (error.getHttpErrorCode() == UWSException.SEE_OTHER){
@@ -1274,7 +1248,7 @@ public class UWSService implements UWS {
 	 * 
 	 * @throws IOException	If there is an error when calling {@link HttpServletResponse#sendError(int, String)}.
 	 * 
-	 * @see {@link ServiceErrorWriter#writeError(Throwable, HttpServletResponse, HttpServletRequest, String, JobOwner, String)}
+	 * @see ServiceErrorWriter#writeError(Throwable, HttpServletResponse, HttpServletRequest, String, JobOwner, String)
 	 */
 	public final void sendError(Exception error, HttpServletRequest request, String reqID, JobOwner user, String uwsAction, HttpServletResponse response) throws IOException{
 		// Write the error in the response and return the appropriate HTTP status code:
