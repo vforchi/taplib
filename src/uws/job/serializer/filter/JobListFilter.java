@@ -33,6 +33,7 @@ import java.util.NoSuchElementException;
 import javax.servlet.http.HttpServletRequest;
 
 import uws.ISO8601Format;
+import uws.UWSException;
 import uws.job.ExecutionPhase;
 import uws.job.UWSJob;
 
@@ -65,7 +66,7 @@ import uws.job.UWSJob;
  * </i></p>
  * 
  * @author Gr&eacute;gory Mantelet (ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (12/2015)
  * @since 4.2
  */
 public class JobListFilter {
@@ -125,8 +126,10 @@ public class JobListFilter {
 	 * </i></p>
 	 * 
 	 * @param request	An HTTP request in which HTTP-GET parameters correspond to Job filters to create.
+	 * 
+	 * @throws UWSException	If the value of at least one AFTER, PHASE or LAST parameter is incorrect. 
 	 */
-	public JobListFilter(final HttpServletRequest request){
+	public JobListFilter(final HttpServletRequest request) throws UWSException{
 		String pName;
 		String[] values;
 
@@ -157,8 +160,7 @@ public class JobListFilter {
 							else
 								phasesFilter.add(phase);
 						}catch(IllegalArgumentException iae){
-							/* If not a legal/known execution phase,
-							 * nothing is done and no error is logged or thrown. */
+							throw new UWSException(UWSException.BAD_REQUEST, "Incorrect PHASE value: \"" + p + "\"! No such execution phase is known by this service.");
 						}
 					}
 				}
@@ -172,8 +174,7 @@ public class JobListFilter {
 							if (afterFilter == null || afterDate.after(afterFilter.getDate()))
 								afterFilter = new AfterFilter(afterDate);
 						}catch(ParseException pe){
-							/* If not a legal ISO8601 date,
-							 * nothing is done and no error is logged or thrown. */
+							throw new UWSException(UWSException.BAD_REQUEST, "Incorrect AFTER value: \"" + p + "\"! The date must be formatted in ISO-8601.");
 						}
 					}
 				}
@@ -186,9 +187,10 @@ public class JobListFilter {
 							// update the last counter (the value is updated only if the new value is positive and smaller):
 							if (last > 0 && (topSize <= 0 || last < topSize))
 								topSize = last;
+							else if (last <= 0)
+								throw new UWSException(UWSException.BAD_REQUEST, "Incorrect LAST value: \"" + p + "\"! A positive and not null integer was expected.");
 						}catch(NumberFormatException nfe){
-							/* If not a legal integer,
-							 * nothing is done and no error is logged or thrown. */
+							throw new UWSException(UWSException.BAD_REQUEST, "Incorrect LAST value: \"" + p + "\"! A positive and not null integer was expected.");
 						}
 					}
 				}

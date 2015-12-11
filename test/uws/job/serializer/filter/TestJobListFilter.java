@@ -53,178 +53,229 @@ public class TestJobListFilter {
 
 	@Test
 	public void testJobListFilter(){
-		// NO PARAMS => Nothing set!
 		TestHttpServletRequest request = new TestHttpServletRequest();
-		JobListFilter filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		JobListFilter filter;
+		try{
+			// NO PARAMS => Nothing set!
+			filter = new JobListFilter(request);
+			assertEquals(1, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
 
-		// A NON FILTER PARAMETER => Nothing set!
-		request.addParams("Nothing", "Blabla");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+			// A NON FILTER PARAMETER => Nothing set!
+			request.addParams("Nothing", "Blabla");
+			filter = new JobListFilter(request);
+			assertEquals(1, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
+		}catch(UWSException ue){
+			ue.printStackTrace(System.err);
+			fail("No error should happen if no LAST, PHASE or AFTER parameter is provided.");
+		}
 
 		/* ************* */
 		/* FILTER: AFTER */
 
 		// INCORRECT AFTER PARAMETER => Nothing set and no error!
-		request.clearParams();
-		request.addParams("AFTER", "2015");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		try{
+			request.clearParams();
+			request.addParams("AFTER", "foo");
+			filter = new JobListFilter(request);
+			fail("The provided parameter AFTER is NOT AT ALL an ISO-8601 date. An error should have occurred.");
+		}catch(UWSException ue){
+			assertEquals("Incorrect AFTER value: \"foo\"! The date must be formatted in ISO-8601.", ue.getMessage());
+			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
+		}
 
-		// CORRECT AFTER PARAMETER => an AfterFilter should be set!
-		request.clearParams();
-		request.addParams("AFTER", "2015-01-01T12:00:00");
-		filter = new JobListFilter(request);
-		assertEquals(2, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
-		assertEquals("2015-01-01T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		try{
+			// CORRECT AFTER PARAMETER => an AfterFilter should be set!
+			// With just a full date:
+			request.clearParams();
+			request.addParams("AFTER", "2015-01-01");
+			filter = new JobListFilter(request);
+			assertEquals(2, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
+			assertEquals("2015-01-01T00:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
+			request.clearParams();
+			// With a full date and time:
+			request.addParams("AFTER", "2015-01-01T12:00:00");
+			filter = new JobListFilter(request);
+			assertEquals(2, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
+			assertEquals("2015-01-01T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
 
-		// CORRECT 3 AFTER PARAMETERS => a single AfterFilter with the most recent date should be set!
-		request.clearParams();
-		request.addParams("AFTER", "2014-01-01T12:00:00");
-		request.addParams("after", "2015-01-30T12:00:00");
-		request.addParams("AFTER", "2015-01-01T12:00:00");
-		filter = new JobListFilter(request);
-		assertEquals(2, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
-		assertEquals("2015-01-30T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+			// CORRECT 3 AFTER PARAMETERS => a single AfterFilter with the most recent date should be set!
+			request.clearParams();
+			request.addParams("AFTER", "2014-01-01T12:00:00");
+			request.addParams("after", "2015-01-30T12:00:00");
+			request.addParams("AFTER", "2015-01-01T12:00:00");
+			filter = new JobListFilter(request);
+			assertEquals(2, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
+			assertEquals("2015-01-30T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
+		}catch(UWSException ue){
+			ue.printStackTrace(System.err);
+			fail("No error should happen since all provided AFTER parameters are correct.");
+		}
 
 		/* ************ */
 		/* FILTER: LAST */
 
 		// 1 INCORRECT LAST PARAMETER => nothing should be set!
-		request.clearParams();
-		request.addParams("LAST", "-10");
-		request.addParams("LAST", "foo");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		try{
+			request.clearParams();
+			request.addParams("LAST", "-10");
+			filter = new JobListFilter(request);
+			fail("The provided parameter LAST is NOT positive. An error should have occurred.");
+		}catch(UWSException ue){
+			assertEquals("Incorrect LAST value: \"-10\"! A positive and not null integer was expected.", ue.getMessage());
+			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
+		}
+		try{
+			request.clearParams();
+			request.addParams("LAST", "foo");
+			filter = new JobListFilter(request);
+			fail("The provided parameter LAST is NOT an integer. An error should have occurred.");
+		}catch(UWSException ue){
+			assertEquals("Incorrect LAST value: \"foo\"! A positive and not null integer was expected.", ue.getMessage());
+			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
+		}
 
-		// CORRECT 1 LAST PARAMETER => a StartedFilter should be set, as well as topSize, sortComp and reverseOrder!
-		request.clearParams();
-		request.addParams("LAST", "10");
-		filter = new JobListFilter(request);
-		assertEquals(2, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(StartedFilter.class, filter.filters.get(1).getClass());
-		assertEquals(10, filter.topSize);
-		assertTrue(filter.reverseOrder);
-		assertNotNull(filter.sortComp);
-		assertEquals(JobListFilter.LastSortComparator.class, filter.sortComp.getClass());
+		try{
+			// CORRECT 1 LAST PARAMETER => a StartedFilter should be set, as well as topSize, sortComp and reverseOrder!
+			request.clearParams();
+			request.addParams("LAST", "10");
+			filter = new JobListFilter(request);
+			assertEquals(2, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(StartedFilter.class, filter.filters.get(1).getClass());
+			assertEquals(10, filter.topSize);
+			assertTrue(filter.reverseOrder);
+			assertNotNull(filter.sortComp);
+			assertEquals(JobListFilter.LastSortComparator.class, filter.sortComp.getClass());
 
-		// CORRECT 3 LAST PARAMETERS => Only the smallest value should be kept ; a StartedFilter should be set, as well as topSize, sortComp and reverseOrder!
-		request.clearParams();
-		request.addParams("LAST", "10");
-		request.addParams("last", "5");
-		request.addParams("LAST", "7");
-		filter = new JobListFilter(request);
-		assertEquals(2, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(StartedFilter.class, filter.filters.get(1).getClass());
-		assertEquals(5, filter.topSize);
-		assertTrue(filter.reverseOrder);
-		assertNotNull(filter.sortComp);
-		assertEquals(JobListFilter.LastSortComparator.class, filter.sortComp.getClass());
+			// CORRECT 3 LAST PARAMETERS => Only the smallest value should be kept ; a StartedFilter should be set, as well as topSize, sortComp and reverseOrder!
+			request.clearParams();
+			request.addParams("LAST", "10");
+			request.addParams("last", "5");
+			request.addParams("LAST", "7");
+			filter = new JobListFilter(request);
+			assertEquals(2, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(StartedFilter.class, filter.filters.get(1).getClass());
+			assertEquals(5, filter.topSize);
+			assertTrue(filter.reverseOrder);
+			assertNotNull(filter.sortComp);
+			assertEquals(JobListFilter.LastSortComparator.class, filter.sortComp.getClass());
+		}catch(UWSException ue){
+			ue.printStackTrace(System.err);
+			fail("No error should happen since all provided LAST parameters are correct.");
+		}
 
 		/* ************* */
 		/* FILTER: PHASE */
 
 		// 1 INCORRECT PHASE PARAMETER => a NoArchivedFilter should be set!
-		request.clearParams();
-		request.addParams("PHASE", "foo");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
-
-		// CORRECT PHASE PARAMETER => a PhasesFilter should be set!
-		request.clearParams();
-		request.addParams("PHASE", "EXECUTING");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
-		assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
-		assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		try{
+			request.clearParams();
+			request.addParams("PHASE", "foo");
+			filter = new JobListFilter(request);
+			fail("The provided parameter PHASE is NOT a valid execution phase. An error should have occurred.");
+		}catch(UWSException ue){
+			assertEquals("Incorrect PHASE value: \"foo\"! No such execution phase is known by this service.", ue.getMessage());
+			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
+		}
 
 		// CORRECT 1 CORRECT + 1 INCORRECT PHASE PARAMETER => a PhasesFilter with only the correct phase should be set!
-		request.clearParams();
-		request.addParams("PHASE", "foo");
-		request.addParams("phase", "EXECUTING");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
-		assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
-		assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		try{
+			request.clearParams();
+			request.addParams("PHASE", "foo");
+			request.addParams("phase", "EXECUTING");
+			filter = new JobListFilter(request);
+			assertEquals(1, filter.filters.size());
+			assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
+			assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
+			assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
+		}catch(UWSException ue){
+			assertEquals("Incorrect PHASE value: \"foo\"! No such execution phase is known by this service.", ue.getMessage());
+			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
+		}
 
-		// CORRECT 2 CORRECT PHASE PARAMETERS => a PhasesFilter with the two correct phases should be set!
-		request.clearParams();
-		request.addParams("PHASE", "QUEUED");
-		request.addParams("phase", "EXECUTING");
-		filter = new JobListFilter(request);
-		assertEquals(1, filter.filters.size());
-		assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
-		assertEquals(2, ((PhasesFilter)filter.filters.get(0)).phases.size());
-		assertEquals(ExecutionPhase.QUEUED, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
-		assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(1));
-		assertEquals(-1, filter.topSize);
-		assertFalse(filter.reverseOrder);
-		assertNull(filter.sortComp);
+		try{
+			// CORRECT PHASE PARAMETER => a PhasesFilter should be set!
+			request.clearParams();
+			request.addParams("PHASE", "EXECUTING");
+			filter = new JobListFilter(request);
+			assertEquals(1, filter.filters.size());
+			assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
+			assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
+			assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
+
+			// CORRECT 2 CORRECT PHASE PARAMETERS => a PhasesFilter with the two correct phases should be set!
+			request.clearParams();
+			request.addParams("PHASE", "QUEUED");
+			request.addParams("phase", "EXECUTING");
+			filter = new JobListFilter(request);
+			assertEquals(1, filter.filters.size());
+			assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
+			assertEquals(2, ((PhasesFilter)filter.filters.get(0)).phases.size());
+			assertEquals(ExecutionPhase.QUEUED, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
+			assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(1));
+			assertEquals(-1, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNull(filter.sortComp);
+		}catch(UWSException ue){
+			ue.printStackTrace(System.err);
+			fail("No error should happen since all provided PHASE parameters are correct.");
+		}
 
 		/* *********** */
 		/* FILTER: ALL */
 
 		// ALL MIXED PARAMETERS
-		request.clearParams();
-		request.addParams("AFTER", "foo");
-		request.addParams("last", "5");
-		request.addParams("phase", "EXECUTING");
-		request.addParams("AFTER", "2015-02-10T12:00:00");
-		request.addParams("PHASE", "foo");
-		request.addParams("LAST", "foo");
-		request.addParams("AFTER", "2013-01-10T12:00:00");
-		filter = new JobListFilter(request);
-		assertEquals(3, filter.filters.size());
-		assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
-		assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
-		assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
-		assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
-		assertEquals("2015-02-10T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
-		assertEquals(StartedFilter.class, filter.filters.get(2).getClass());
-		assertEquals(5, filter.topSize);
-		assertTrue(filter.reverseOrder);
-		assertNotNull(filter.sortComp);
+		try{
+			request.clearParams();
+			request.addParams("last", "5");
+			request.addParams("phase", "EXECUTING");
+			request.addParams("AFTER", "2015-02-10T12:00:00");
+			request.addParams("AFTER", "2013-01-10T12:00:00");
+			filter = new JobListFilter(request);
+			assertEquals(3, filter.filters.size());
+			assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
+			assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
+			assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
+			assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
+			assertEquals("2015-02-10T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
+			assertEquals(StartedFilter.class, filter.filters.get(2).getClass());
+			assertEquals(5, filter.topSize);
+			assertTrue(filter.reverseOrder);
+			assertNotNull(filter.sortComp);
+		}catch(UWSException ue){
+			ue.printStackTrace(System.err);
+			fail("No error should happen since all provided PHASE, LAST and AFTER parameters are correct.");
+		}
 	}
 
 	@Test
