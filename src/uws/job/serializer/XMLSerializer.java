@@ -230,8 +230,8 @@ public class XMLSerializer extends UWSSerializer {
 		xml.append(newLine).append(getErrorSummary(job.getErrorSummary(), false));
 
 		// jobInfo:
-		if (job.countJobInfo() > 0)
-			xml.append(newLine).append(getJobInfoList(job, false));
+		if (job.hasJobInfo())
+			xml.append(newLine).append(getJobInfo(job, false));
 
 		tabPrefix = "";
 		return xml.append("\n</job>").toString();
@@ -449,22 +449,11 @@ public class XMLSerializer extends UWSSerializer {
 	}
 
 	@Override
-	public String getJobInfoList(UWSJob job, boolean root){
+	public String getJobInfo(UWSJob job, boolean root){
 		StringBuffer xml = new StringBuffer(root ? getHeader() : "");
 		xml.append(tabPrefix).append("<jobInfo").append(getUWSNamespace(root)).append('>');
-
-		Iterator<Map.Entry<String,Object>> it = job.getJobInfo();
-		String newLine = "\n\t" + tabPrefix;
-		Map.Entry<String,Object> entry;
-		while(it.hasNext()){
-			entry = it.next();
-			if (entry.getValue() == null)
-				continue;
-			xml.append(newLine).append('<').append(entry.getKey()).append('>');
-			xml.append(formatPieceOfJobInfo(entry.getValue(), newLine));
-			xml.append("</").append(entry.getKey()).append('>');
-		}
-		xml.append('\n').append(tabPrefix).append("</jobInfo>");
+		xml.append(job.getJobInfo().toXML(tabPrefix));
+		xml.append("</jobInfo>");
 		return xml.toString();
 	}
 

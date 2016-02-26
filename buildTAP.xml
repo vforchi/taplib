@@ -2,7 +2,7 @@
 <!DOCTYPE project>
 <project name="tap" basedir="." default="buildLib">
 	
-	<property name="version" value="2.0beta" />
+	<property name="version" value="2.1" />
 
 	<property name="srcDir" value="src" />
 	<property name="libDir" value="lib" />

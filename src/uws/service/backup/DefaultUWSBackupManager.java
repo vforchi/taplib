@@ -16,7 +16,7 @@ package uws.service.backup;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012,2014 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -46,6 +48,8 @@ import uws.UWSException;
 import uws.UWSToolBox;
 import uws.job.ErrorSummary;
 import uws.job.ErrorType;
+import uws.job.JobInfo;
+import uws.job.JobInfo.InfoType;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
@@ -77,7 +81,7 @@ import uws.service.request.UploadFile;
  * <p>Another positive value will be considered as the frequency (in milliseconds) of the automatic backup (= {@link #saveAll()}).</p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.1 (12/2014)
+ * @version 4.2 (02/2016)
  */
 public class DefaultUWSBackupManager implements UWSBackupManager {
 
@@ -297,7 +301,7 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 	 * @see UWSToolBox#getDefaultLogger()
 	 */
 	public UWSLog getLogger(){
-		if (uws.getLogger() != null)
+		if (uws != null && uws.getLogger() != null)
 			return uws.getLogger();
 		else
 			return UWSToolBox.getDefaultLogger();
@@ -571,6 +575,10 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 		// Add the name of the job list owning the given job:
 		jsonJob.put("jobListName", jlName);
 
+		// Give more details about the JobInfo:
+		if (job.hasJobInfo())
+			jsonJob.put("jobInfo", job.getJobInfo().getBackupContent());
+
 		return jsonJob;
 	}
 
@@ -816,6 +824,7 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 			return false;
 
 		String jobListName = null, jobId = null, ownerID = null, tmp;
+		JobInfo jobInfo = null;
 		//Date destruction=null;
 		long quote = UWSJob.UNLIMITED_DURATION, /*duration = UWSJob.UNLIMITED_DURATION, */startTime = -1, endTime = -1;
 		HashMap<String,Object> inputParams = new HashMap<String,Object>(10);
@@ -902,7 +911,15 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 				else if (key.equalsIgnoreCase(UWSJob.PARAM_ERROR_SUMMARY)){
 					error = getError(json.getJSONObject(key));
 
-				}// Ignore any other key but with a warning message:
+				}// key=VERSION:
+				else if (key.equalsIgnoreCase("version"))
+					; // nothing special to do, except not reporting a warning as a former version of a UWS Service would do!
+
+				// key=JOB_INFO
+				else if (key.equalsIgnoreCase("jobInfo"))
+					jobInfo = getJobInfo(json.getJSONObject(key));
+
+				// Ignore any other key but with a warning message:
 				else
 					getLogger().logUWS(LogLevel.WARNING, json, "RESTORATION", "The job attribute '" + key + "' has been ignored because unknown! A job may be not completely restored!", null);
 
@@ -964,6 +981,9 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 
 			// Restore other job params if needed:
 			restoreOtherJobParams(json, job);
+
+			// Restore the additional job information:
+			job.setJobInfo(jobInfo);
 
 			// Restore it:
 			return (uws.getJobList(jobListName).addNewJob(job) != null);
@@ -1151,6 +1171,118 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 			return new ErrorSummary(message, ErrorType.valueOf(type.toUpperCase()), details);
 		else
 			return null;
+	}
+
+	/**
+	 * Builds the additional job information corresponding to the given JSON object.
+	 * 
+	 * @param obj				The JSON representation of the additional job information to restore.
+	 * 
+	 * @return					The corresponding additional job information or <i>null</i> if the given object is empty.
+	 * 
+	 * @throws UWSException
+	 * 
+	 * @see {@link #createCustomJobInfo(String, Object)}
+	 */
+	protected JobInfo getJobInfo(final JSONObject obj) throws UWSException{
+		if (obj == null || obj.length() == 0)
+			return null;
+
+		// Fetch the Info type to determine if a custom JobInfo must be used:
+		String type = obj.optString("type");
+		InfoType infoType = null;
+		if (type != null){
+			try{
+				infoType = InfoType.valueOf(type.trim().toUpperCase());
+			}catch(IllegalArgumentException iae){
+				// CUSTOM TYPE!
+			}
+		}
+
+		// Fetch the Info content:
+		Object content = obj.opt("content");
+
+		/* Create the JobInfo and set the content
+		 * if the InfoType has been resolved BUT ALSO if no type has been specified
+		 * (in this case, a default JobInfo may be enough): */
+		if (infoType != null || type == null){
+			/* Note: setContent(Object) is preferred to the usage
+			 *       of an appropriate constructor because it is able to detect
+			 *       automatically the type of the job info. This is more
+			 *       reliable than the "type" attribute which may be missing or wrong. */
+			JobInfo info = new JobInfo();
+			try{
+				info.setContent(content);
+				return info;
+			}catch(IllegalArgumentException iae){
+				/* An error occurs only if it an extension of JobInfo is used.
+				 * But since none is specified, it is impossible to restore this JobInfo. */
+				return null;
+			}
+		}
+		/* Otherwise, just use the given type as a class name and try creating
+		 * and setting the custom JobInfo: */
+		else{
+			// Create an instance of the custom JobInfo with the given content:
+			JobInfo info = createCustomJobInfo(type);
+			if (info == null)
+				return null;
+
+			// Set the content:
+			try{
+				info.setContent(content);
+			}catch(IllegalArgumentException iae2){
+				return null;
+			}
+
+			return info;
+		}
+	}
+
+	/**
+	 * <p>Create an instance of the specified class using its empty constructor.</p>
+	 * 
+	 * <p>
+	 * 	In case the specified class does not exist, does not have the required constructor
+	 * 	or if the execution of the constructor fails, the error is logged and <code>null</code>
+	 * 	is returned.
+	 * </p>
+	 * 
+	 * @param className	Name of the class extending {@link JobInfo} whose an instance must be created here.
+	 * 
+	 * @return	The corresponding {@link JobInfo} instance.
+	 */
+	@SuppressWarnings("unchecked")
+	protected JobInfo createCustomJobInfo(final String className){
+		Class<? extends JobInfo> classObject = null;
+		try{
+			// Load the class:
+			classObject = (Class<? extends JobInfo>)Class.forName(className);
+			if (!JobInfo.class.isAssignableFrom(classObject))
+				getLogger().logUWS(LogLevel.WARNING, "jobInfo", "RESTORATION", "The class \"" + className + "\" is not implementing uws.job.JobInfo. The additional job information can not be restored.", null);
+			else{
+				// Get the empty constructor:
+				Constructor<? extends JobInfo> constructor = classObject.getConstructor(new Class<?>[0]);
+
+				// Finally create a new instance:
+				return constructor.newInstance();
+			}
+		}catch(ClassNotFoundException cnfe){
+			getLogger().logUWS(LogLevel.WARNING, "jobInfo", "RESTORATION", "The class specified for jobInfo (" + className + ") can not be found. The additional job information can not be restored.", null);
+		}catch(ClassCastException cce){
+			getLogger().logUWS(LogLevel.WARNING, "jobInfo", "RESTORATION", "The class specified for jobInfo (" + className + ") is not extending uws.job.JobInfo. The additional job information can not be restored.", null);
+		}catch(NoSuchMethodException e){
+			getLogger().logUWS(LogLevel.WARNING, "jobInfo", "RESTORATION", "Missing empty constructor for the class " + classObject.getName() + "! The additional job information can not be restored.", null);
+		}catch(InstantiationException ie){
+			getLogger().logUWS(LogLevel.WARNING, "jobInfo", "RESTORATION", "Impossible to create an instance of an abstract class: \"" + classObject.getName() + "\"! The additional job information can not be restored.", null);
+		}catch(InvocationTargetException ite){
+			getLogger().logUWS(LogLevel.ERROR, "jobInfo", "RESTORATION", "An error occurred while creating a custom JobInfo (" + className + ") using the empty constructor! The additional job information can not be restored.", ite);
+		}catch(IllegalAccessException iae){
+			getLogger().logUWS(LogLevel.ERROR, "jobInfo", "RESTORATION", "An error occurred while invoking a custom JobInfo (" + className + ") using the empty constructor! The additional job information can not be restored.", iae);
+		}catch(IllegalArgumentException iae){
+			getLogger().logUWS(LogLevel.ERROR, "jobInfo", "RESTORATION", "An error occurred while invoking a custom JobInfo (" + className + ") using the empty constructor\"! The additional job information can not be restored.", iae);
+		}
+		return null;
 	}
 
 	/* **************** */

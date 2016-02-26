@@ -16,7 +16,7 @@ package uws.job.serializer;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -42,7 +42,7 @@ import uws.service.UWSUrl;
  * </ul>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (02/2016)
  * 
  * @see XMLSerializer
  * @see JSONSerializer
@@ -153,7 +153,7 @@ public abstract class UWSSerializer implements Serializable {
 				return getErrorSummary(job.getErrorSummary(), root);
 		// JOB INFO:
 		else if (firstAttribute.equalsIgnoreCase(UWSJob.PARAM_JOB_INFO))
-			return getJobInfoList(job, root);
+			return getJobInfo(job, root);
 		// OTHERS:
 		else
 			throw new UWSException(UWSException.NOT_FOUND, "No job attribute named \"" + firstAttribute + "\" in the job \"" + job.getJobId() + "\"!");
@@ -456,17 +456,17 @@ public abstract class UWSSerializer implements Serializable {
 	public abstract String getAdditionalParameter(final String paramName, final Object paramValue, final boolean root) throws Exception;
 
 	/**
-	 * Serializes the list of all job information associated with the given job.
+	 * Serializes the additional job information associated with the given job.
 	 * 
 	 * @param job			The job whose the job information must be serialized.
-	 * @param root			<i>false</i> if the job information list to serialize will be included
+	 * @param root			<i>false</i> if the job information to serialize will be included
 	 *            			in a top level serialization (for a list of parameters: job), <i>true</i> otherwise.
 	 * 
-	 * @return				The serialization of the list of all job information.
+	 * @return				The serialization of the additional job information.
 	 * 
 	 * @throws Exception	If there is an error during the serialization.
 	 * 
 	 * @since 4.2
 	 */
-	public abstract String getJobInfoList(final UWSJob job, final boolean root) throws Exception;
+	public abstract String getJobInfo(final UWSJob job, final boolean root) throws Exception;
 }

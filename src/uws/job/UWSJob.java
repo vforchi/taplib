@@ -16,7 +16,7 @@ package uws.job;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -26,13 +26,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
 import javax.servlet.ServletOutputStream;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import uws.ISO8601Format;
 import uws.UWSException;
@@ -125,15 +127,15 @@ import uws.service.request.UploadFile;
  * 	</li>
  * 	<br />
  * 	<li>
- * 		<b>{@link #putJobInfo(String, Object)}:</b>
- * 					Additional job information may be added to the job description. These information can be set/removed/accessed <strong>at any time</strong> through the
+ * 		<b>{@link #setJobInfo(JobInfo)}:</b>
+ * 					Free additional job information may be added to the job description. These information can be set/removed/accessed <strong>at any time</strong> through the
  * 					UWSLibrary API <strong>ONLY</strong>. They are not designed to be parameters or results, but additional information (e.g. execution statistics, ...)
  * 					that the UWS service implementation wants to share with the clients. 
  * 	</li>
  * </ul>
  * 
  * @author	Gr&eacute;gory Mantelet (CDS;ARI)
- * @version	4.2 (10/2015)
+ * @version	4.2 (02/2016)
  */
 public class UWSJob extends SerializableUWSObject {
 	private static final long serialVersionUID = 1L;
@@ -284,9 +286,16 @@ public class UWSJob extends SerializableUWSObject {
 	/** If this job has been restored, this attribute should be set with the date of its restoration. */
 	private final Date restorationDate;
 
-	/** List of any other information that a UWS implementation wants to store/manage.
+	/** <p>Additional job information.</p>
+	 * <p><i>Note:
+	 * 	The job information manipulated by this function are only information
+	 * 	stored and managed by a UWS implementation and made public by choice.
+	 * 	They are not (and should never be) manipulated by UWS users.
+	 * 	Those job information can be set/deleted/modified at any time, whatever
+	 * 	is the current job's execution phase.
+	 * </i></p>
 	 * @since 4.2 */
-	private final Map<String,Object> jobInfo = new LinkedHashMap<String,Object>();
+	private JobInfo jobInfo = null;
 
 	/* ************ */
 	/* CONSTRUCTORS */
@@ -1219,7 +1228,7 @@ public class UWSJob extends SerializableUWSObject {
 	/* ******** */
 
 	/**
-	 * <p>Get the value of the specified piece of job information.</p>
+	 * <p>Get the additional information associated with this job.</p>
 	 * 
 	 * <p><i>Note:
 	 * 	The job information manipulated by this function are only information
@@ -1231,17 +1240,17 @@ public class UWSJob extends SerializableUWSObject {
 	 * 
 	 * @param infoName	Name of the piece of job information to get.
 	 * 
-	 * @return	Value of the specified piece of job information,
-	 *        	or NULL, if no value is set for the specified name.
+	 * @return	Additional information associated with this job,
+	 *        	or <code>null</code>, if there is none.
 	 * 
 	 * @since 4.2
 	 */
-	public final Object getJobInfo(final String infoName){
-		return jobInfo.get(infoName);
+	public final JobInfo getJobInfo(){
+		return jobInfo;
 	}
 
 	/**
-	 * <p>Set/Reset the specified piece of job information with the given value.</p>
+	 * <p>Set the additional information associated with this job.</p>
 	 * 
 	 * <p><i>Note:
 	 * 	The job information manipulated by this function are only information
@@ -1251,27 +1260,20 @@ public class UWSJob extends SerializableUWSObject {
 	 * 	is the current job's execution phase.
 	 * </i></p>
 	 * 
-	 * @param infoName	Name of the piece of job information to set/reset.
-	 * @param value		Value of the specified piece of job information.
-	 *             		<i>If NULL, the specified piece of job information will be removed.</i>
-	 * 
-	 * @return	The former value associated to the specified piece of job information,
-	 *        	or NULL if this piece of job information has never been set before.
+	 * @param newInfo	New additional job information.
+	 *             		<i>If <code>null</code>, the current job information will be removed.</i>
 	 * 
 	 * @since 4.2
 	 */
-	public final Object putJobInfo(final String infoName, final Object value){
-		if (infoName == null || infoName.trim().length() == 0)
-			return null;
-
-		if (value == null)
-			return jobInfo.remove(infoName);
+	public final void setJobInfo(final JobInfo newInfo){
+		if (newInfo == null)
+			removeJobInfo();
 		else
-			return jobInfo.put(infoName, value);
+			jobInfo = newInfo;
 	}
 
 	/**
-	 * <p>Remove the specified piece of job information.</p>
+	 * <p>Remove the additional information associated with this job.</p>
 	 * 
 	 * <p><i>Note:
 	 * 	The job information manipulated by this function are only information
@@ -1281,19 +1283,18 @@ public class UWSJob extends SerializableUWSObject {
 	 * 	is the current job's execution phase.
 	 * </i></p>
 	 * 
-	 * @param infoName	Name of the piece of job information to remove.
-	 * 
-	 * @return	The former value associated to the specified piece of job information,
-	 *        	or NULL if this piece of job information has never been set before.
+	 * @return	The former removed additional information. <i>May be <code>null</code>.</i>
 	 * 
 	 * @since 4.2
 	 */
-	public final Object removeJobInfo(final String infoName){
-		return jobInfo.remove(infoName);
+	public final JobInfo removeJobInfo(){
+		JobInfo info = jobInfo;
+		jobInfo = null;
+		return info;
 	}
 
 	/**
-	 * <p>Get the number of job information associated with this job.</p>
+	 * <p>Tell whether this job has additional information.</p>
 	 * 
 	 * <p><i>Note:
 	 * 	The job information manipulated by this function are only information
@@ -1303,50 +1304,13 @@ public class UWSJob extends SerializableUWSObject {
 	 * 	is the current job's execution phase.
 	 * </i></p>
 	 * 
-	 * @return	The number of all set job information.
+	 * @return	<code>true</code> if this job has additional information,
+	 *        	<code>false</code> otherwise. 
 	 * 
 	 * @since 4.2
 	 */
-	public final int countJobInfo(){
-		return jobInfo.size();
-	}
-
-	/**
-	 * <p>Get the name of all job information associated to this job.</p>
-	 * 
-	 * <p><i>Note:
-	 * 	The job information manipulated by this function are only information
-	 * 	stored and managed by a UWS implementation and made public by choice.
-	 * 	They are not (and should never be) manipulated by UWS users.
-	 * 	Those job information can be set/deleted/modified at any time, whatever
-	 * 	is the current job's execution phase.
-	 * </i></p> 
-	 * 
-	 * @return	An iterator on the list of job information names.
-	 * 
-	 * @since 4.2
-	 */
-	public final Iterator<String> getJobInfoNames(){
-		return jobInfo.keySet().iterator();
-	}
-
-	/**
-	 * <p>Get all job information associated to this job.</p>
-	 * 
-	 * <p><i>Note:
-	 * 	The job information manipulated by this function are only information
-	 * 	stored and managed by a UWS implementation and made public by choice.
-	 * 	They are not (and should never be) manipulated by UWS users.
-	 * 	Those job information can be set/deleted/modified at any time, whatever
-	 * 	is the current job's execution phase.
-	 * </i></p> 
-	 * 
-	 * @return	An iterator on the list of all job information.
-	 * 
-	 * @since 4.2
-	 */
-	public final Iterator<Map.Entry<String,Object>> getJobInfo(){
-		return jobInfo.entrySet().iterator();
+	public final boolean hasJobInfo(){
+		return (jobInfo != null && jobInfo.getContent() != null);
 	}
 
 	/* ******************** */
@@ -1623,8 +1587,17 @@ public class UWSJob extends SerializableUWSObject {
 
 		// Change the phase:
 		try{
-			// store the current phase as additional JobInfo for user curiosity:
-			putJobInfo("oldPhase", getPhase());
+			/* store the current phase as additional JobInfo for user curiosity,
+			 * ONLY IF no additional information is already set: */
+			if (!hasJobInfo()){
+				try{
+					JSONObject obj = new JSONObject();
+					obj.put("oldPhase", getPhase());
+					setJobInfo(new JobInfo(obj));
+				}catch(JSONException je){
+					; // this exception could not happen since the JSONObject's item name is not NULL (it is "oldPhase")!
+				}
+			}
 			// change phase:
 			setPhase(ExecutionPhase.ARCHIVED);
 			return true;

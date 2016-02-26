@@ -152,7 +152,7 @@ public class JSONSerializer extends UWSSerializer {
 	}
 
 	@Override
-	public String getJobInfoList(UWSJob job, boolean root) throws Exception{
+	public String getJobInfo(UWSJob job, boolean root) throws Exception{
 		return Json4Uws.getJson(job.getJobInfo()).toString();
 	}
 

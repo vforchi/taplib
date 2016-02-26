@@ -26,6 +26,7 @@ import java.util.Map;
 
 import uws.ISO8601Format;
 import uws.job.ErrorSummary;
+import uws.job.JobInfo;
 import uws.job.JobList;
 import uws.job.Result;
 import uws.job.UWSJob;
@@ -174,7 +175,7 @@ public final class Json4Uws {
 				json.put(UWSJob.PARAM_PARAMETERS, getJobParamsJson(job));
 				json.put(UWSJob.PARAM_RESULTS, getJobResultsJson(job));
 				json.put(UWSJob.PARAM_ERROR_SUMMARY, getJson(job.getErrorSummary()));
-				if (job.countJobInfo() > 0)
+				if (job.hasJobInfo())
 					json.put(UWSJob.PARAM_JOB_INFO, getJson(job.getJobInfo()));
 			}
 		}
@@ -265,6 +266,26 @@ public final class Json4Uws {
 			errorJson.put("message", error.getMessage());
 		}
 		return errorJson;
+	}
+
+	/**
+	 * Gets the JSON representation of the given {@link JobInfo}.
+	 * @param info				The additional job information to represent in JSON.
+	 * @return					Its JSON representation.
+	 * @throws JSONException	If there is an error while building the JSON object.
+	 * @since 4.2
+	 */
+	public final static Object getJson(final JobInfo info) throws JSONException{
+		if (info != null && info.getContent() != null && info.getType() != null){
+			switch(info.getType()){
+				case ARRAY:
+				case MAP:
+					return info.getContent();
+				default:
+					return info.toJSON();
+			}
+		}else
+			return null;
 	}
 
 	/**
