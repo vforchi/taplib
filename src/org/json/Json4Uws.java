@@ -16,7 +16,7 @@ package org.json;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -39,7 +39,7 @@ import uws.service.UWSUrl;
  * Useful conversion functions from UWS to JSON.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (02/2016)
  */
 public final class Json4Uws {
 
@@ -242,7 +242,7 @@ public final class Json4Uws {
 			resultJson.put("id", r.getId());
 			resultJson.put("type", r.getType());
 			resultJson.put("href", r.getHref());
-			resultJson.put("mime-type", r.getMimeType());
+			resultJson.put("mime", r.getMimeType());
 			if (r.getSize() >= 0)
 				resultJson.put("size", r.getSize());
 			resultJson.put("redirection", r.isRedirectionRequired());
