@@ -576,8 +576,12 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 		jsonJob.put("jobListName", jlName);
 
 		// Give more details about the JobInfo:
-		if (job.hasJobInfo())
-			jsonJob.put("jobInfo", job.getJobInfo().getBackupContent());
+		if (job.hasJobInfo()){
+			JSONObject infoObj = new JSONObject();
+			infoObj.put("type", (job.getJobInfo().getType() == InfoType.CUSTOM) ? job.getJobInfo().getClass().toString() : job.getJobInfo().getType().toString());
+			infoObj.put("content", job.getJobInfo().getBackupContent());
+			jsonJob.put("jobInfo", infoObj);
+		}
 
 		return jsonJob;
 	}

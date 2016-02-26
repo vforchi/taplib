@@ -58,8 +58,8 @@ public class TestJobInfo {
 		info.setContent("foo < bar > thing<>>");
 		assertEquals("foo &lt; bar &gt; thing&lt;&gt;&gt;", info.toXML(null));
 
-		// Check the Backup output (should be similar to the JSON output):
-		assertEquals(info.toJSON(), info.getBackupContent());
+		// Check the Backup output (should be the string content):
+		assertEquals("foo < bar > thing<>>", info.getBackupContent());
 
 		// Check the string output:
 		assertEquals("foo < bar > thing<>>", info.toString());
@@ -117,8 +117,8 @@ public class TestJobInfo {
 		// indentation should not change anything in the case of an elementary content:
 		assertEquals("<blabla>it's a \"blabla\"!</blabla>", info.toXML("\t"));
 
-		// Check the Backup output (should be similar to the JSON output):
-		assertEquals(info.toJSON(), info.getBackupContent());
+		// Check the Backup output (should be the string content):
+		assertEquals("<blabla>it's a \"blabla\"!</blabla>", info.getBackupContent());
 
 		// Check the string output:
 		assertEquals("<blabla>it's a \"blabla\"!</blabla>", info.toString());
@@ -155,8 +155,8 @@ public class TestJobInfo {
 		// indentation should not change anything in the case of an elementary content:
 		assertEquals("3.14", info.toXML("\t"));
 
-		// Check the Backup output (should be similar to the JSON output):
-		assertEquals(info.toJSON(), info.getBackupContent());
+		// Check the Backup output (should be the numeric content):
+		assertEquals(3.14, info.getBackupContent());
 
 		// Check the string output:
 		assertEquals("3.14", info.toString());
@@ -199,8 +199,8 @@ public class TestJobInfo {
 		// indentation should not change anything in the case of an elementary content:
 		assertEquals("3", info.toXML("\t"));
 
-		// Check the Backup output (should be similar to the JSON output):
-		assertEquals(info.toJSON(), info.getBackupContent());
+		// Check the Backup output (should be the numeric content):
+		assertEquals(3, info.getBackupContent());
 
 		// Check the string output:
 		assertEquals("3", info.toString());
@@ -248,9 +248,9 @@ public class TestJobInfo {
 		assertEquals("\n", info.toXML(null));
 		assertEquals("\n\t", info.toXML("\t"));
 
-		// Check the Backup output (should be similar to the JSON output):
+		// Check the Backup output (should be the array content):
 		info.setContent(array);
-		assertEquals(info.toJSON(), info.getBackupContent());
+		assertEquals(array, info.getBackupContent());
 
 		// Check the string output:
 		assertEquals(array.toString(), info.toString());
@@ -321,9 +321,9 @@ public class TestJobInfo {
 		assertEquals("\n", info.toXML(null));
 		assertEquals("\n\t", info.toXML("\t"));
 
-		// Check the Backup output (should be similar to the JSON output):
+		// Check the Backup output (should be the content map):
 		info.setContent(map);
-		assertEquals(info.toJSON(), info.getBackupContent());
+		assertEquals(map, info.getBackupContent());
 
 		// Check the string output:
 		assertEquals(map.toString(), info.toString());
@@ -350,7 +350,7 @@ public class TestJobInfo {
 		assertEquals(0, info.toJSON().length());
 		assertEquals(0, info.toXML(null).length());
 		assertEquals(0, info.toXML("\t").length());
-		assertEquals(0, info.getBackupContent().length());
+		assertNull(info.getBackupContent());
 		assertEquals(0, info.toString().length());
 	}
 

@@ -304,22 +304,31 @@ public class JobInfo {
 	}
 
 	/**
-	 * <p>Build a JSON expression representing this Job Info
+	 * <p>Build an object representing this Job Info
 	 * and which can be used to re-create this Job Info in the
 	 * same state at the UWS Service restoration.</p>
 	 * 
-	 * <p>By default, {@link #toJSON()} is called.</p>
+	 * <p>By default, this function returns {@link #content} except if {@link #type}
+	 * is {@link InfoType#CUSTOM}.</p>
+	 * 
+	 * <p><b>IMPORTANT:
+	 * 	This function MUST return an object that can stored in a {@link JSONObject}
+	 * 	as value. So, it MUST be a String, a numeric type (Double, Integer, ...),
+	 * 	a {@link JSONObject} or a {@link JSONArray}.</b></p>  
 	 * 
 	 * <p><i>Note:
 	 * 	This function should be overwritten if inside an extension of {@link JobInfo} aiming
 	 * 	to support a special type of content. Otherwise, {@link InfoType#CUSTOM} contents
 	 * 	will never be backup-ed.</i></p>
 	 * 
-	 * @return	A JSON expression for backup.
+	 * @return	An object to store in a {@link JSONObject}.
 	 *        	<i>If <code>null</code> no job info will be backup-ed.</i>
 	 */
-	public String getBackupContent(){
-		return toJSON();
+	public Object getBackupContent(){
+		if (type == InfoType.CUSTOM)
+			return null;
+		else
+			return content;
 	}
 
 	/**

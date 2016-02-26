@@ -34,6 +34,7 @@ import tap.TAPExecutionReport;
 import tap.TAPJob;
 import tap.parameters.DALIUpload;
 import uws.UWSException;
+import uws.job.JobInfo.InfoType;
 import uws.job.UWSJob;
 import uws.service.UWS;
 import uws.service.backup.DefaultUWSBackupManager;
@@ -164,6 +165,14 @@ public class DefaultTAPBackupManager extends DefaultUWSBackupManager {
 
 		// Add the name of the job list owning the given job:
 		jsonJob.put("jobListName", jlName);
+
+		// Give more details about the JobInfo:
+		if (job.hasJobInfo()){
+			JSONObject infoObj = new JSONObject();
+			infoObj.put("type", (job.getJobInfo().getType() == InfoType.CUSTOM) ? job.getJobInfo().getClass().toString() : job.getJobInfo().getType().toString());
+			infoObj.put("content", job.getJobInfo().getBackupContent());
+			jsonJob.put("jobInfo", infoObj);
+		}
 
 		return jsonJob;
 	}
