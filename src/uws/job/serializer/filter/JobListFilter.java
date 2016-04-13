@@ -16,7 +16,7 @@ package uws.job.serializer.filter;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2015 - Astronomisches Rechen Institut (ARI) 
+ * Copyright 2015-2016 - Astronomisches Rechen Institut (ARI)
  */
 
 import java.text.ParseException;
@@ -45,18 +45,16 @@ import uws.job.UWSJob;
  * 	<li><b>PHASE</b>: a single legal phase is expected. Only jobs having this phase will pass through this filter.<br/>
  * 	                 <i><b>Note:</b> Several <code>PHASE</code> parameters with different execution phases may be provided.
  * 	                 Their effect will be joint with a logical OR (so, all jobs of one of the given phases will pass the filter).</i></li>
- * 	
+ * 
  * 	<li><b>AFTER</b>: an ISO-8601 date is expected. Only jobs started (strictly) after this date will pass through the filter.<br/>
  * 	                 <i><b>Note:</b> If several <code>AFTER</code> parameters are provided, only the one with the most recent date
  * 	                 will be taken into account. For instance: <code>?AFTER=2015-01-01T12:00:00Z&AFTER=2014-01-01T12:00:00Z</code>
  * 	                 will be interpreted as just 1 AFTER filter with the date <code>2015-01-01T12:00:00Z</code>.</i></li>
- * 	
- * 	<li><b>LAST</b>: a positive integer number is expected. Only the LAST most recently started jobs will pass through the filter.
- * 	                 The jobs will be sorted by ascending startTime.<br/>
- * 	                 <i><b>Note 1:</b> If several <code>LAST</code> parameters are provided, only the smallest positive (and not null) value
- * 	                 will be taken into account.</i><br/>
- * 	                 <i><b>Note 2:</b> Only started jobs will be returned if this filter is specified.
- * 	                 This means that only PENDING jobs are rejected.</i></li>
+ * 
+ * 	<li><b>LAST</b>: a positive integer number is expected. Only the LAST most recently created jobs will pass through the filter.
+ * 	                 The jobs will be sorted by descending creationTime.<br/>
+ * 	                 <i><b>Note:</b> If several <code>LAST</code> parameters are provided, only the smallest positive (and not null) value
+ * 	                 will be taken into account.</i></li>
  * </ul>
  * 
  * <p><i><b>IMPORTANT Note:</b>
@@ -66,7 +64,7 @@ import uws.job.UWSJob;
  * </i></p>
  * 
  * @author Gr&eacute;gory Mantelet (ARI)
- * @version 4.2 (12/2015)
+ * @version 4.2 (04/2016)
  * @since 4.2
  */
 public class JobListFilter {
@@ -105,18 +103,16 @@ public class JobListFilter {
 	 * 	<li><b>PHASE</b>: a single legal phase is expected. Only jobs having this phase will pass through this filter.<br/>
 	 * 	                 <i><b>Note:</b> Several <code>PHASE</code> parameters with different execution phases may be provided.
 	 * 	                 Their effect will be joint with a logical OR (so, all jobs of one of the given phases will pass the filter).</i></li>
-	 * 	
+	 * 
 	 * 	<li><b>AFTER</b>: an ISO-8601 date is expected. Only jobs started (strictly) after this date will pass through the filter.<br/>
 	 * 	                 <i><b>Note:</b> If several <code>AFTER</code> parameters are provided, only the one with the most recent date
 	 * 	                 will be taken into account. For instance: <code>?AFTER=2015-01-01T12:00:00Z&AFTER=2014-01-01T12:00:00Z</code>
 	 * 	                 will be interpreted as just 1 AFTER filter with the date <code>2015-01-01T12:00:00Z</code>.</i></li>
-	 * 	
-	 * 	<li><b>LAST</b>: a positive integer number is expected. Only the LAST most recently started jobs will pass through the filter.
-	 * 	                 The jobs will be sorted by ascending startTime.<br/>
-	 * 	                 <i><b>Note 1:</b> If several <code>LAST</code> parameters are provided, only the smallest positive (and not null) value
-	 * 	                 will be taken into account.</i><br/>
-	 * 	                 <i><b>Note 2:</b> Only started jobs will be returned if this filter is specified.
-	 * 	                 This means that only PENDING jobs are rejected.</i></li>
+	 * 
+	 * 	<li><b>LAST</b>: a positive integer number is expected. Only the LAST most recently created jobs will pass through the filter.
+	 * 	                 The jobs will be sorted by descending creationTime.<br/>
+	 * 	                 <i><b>Note:</b> If several <code>LAST</code> parameters are provided, only the smallest positive (and not null) value
+	 * 	                 will be taken into account.</i></li>
 	 * </ul>
 	 * 
 	 * <p><i><b>IMPORTANT Note:</b>
@@ -127,7 +123,7 @@ public class JobListFilter {
 	 * 
 	 * @param request	An HTTP request in which HTTP-GET parameters correspond to Job filters to create.
 	 * 
-	 * @throws UWSException	If the value of at least one AFTER, PHASE or LAST parameter is incorrect. 
+	 * @throws UWSException	If the value of at least one AFTER, PHASE or LAST parameter is incorrect.
 	 */
 	public JobListFilter(final HttpServletRequest request) throws UWSException{
 		String pName;
@@ -182,15 +178,15 @@ public class JobListFilter {
 				for(String p : values){
 					if (p != null){
 						try{
-							// resolve date:
+							// resolve the number of jobs to fetch:
 							last = Integer.parseInt(p);
 							// update the last counter (the value is updated only if the new value is positive and smaller):
-							if (last > 0 && (topSize <= 0 || last < topSize))
+							if (last >= 0 && (topSize < 0 || last < topSize))
 								topSize = last;
-							else if (last <= 0)
-								throw new UWSException(UWSException.BAD_REQUEST, "Incorrect LAST value: \"" + p + "\"! A positive and not null integer was expected.");
+							else if (last < 0)
+								throw new UWSException(UWSException.BAD_REQUEST, "Incorrect LAST value: \"" + p + "\"! A positive integer was expected.");
 						}catch(NumberFormatException nfe){
-							throw new UWSException(UWSException.BAD_REQUEST, "Incorrect LAST value: \"" + p + "\"! A positive and not null integer was expected.");
+							throw new UWSException(UWSException.BAD_REQUEST, "Incorrect LAST value: \"" + p + "\"! A positive integer was expected.");
 						}
 					}
 				}
@@ -211,14 +207,12 @@ public class JobListFilter {
 			filters.add(afterFilter);
 
 		// Set the LAST filter:
-		if (topSize > 0){
-			// only started jobs are allowed here:
-			filters.add(new StartedFilter());
-			// jobs are sorted by descending start-time (so that only the topSize first can be easily read):
-			sortComp = new LastSortComparator();
-			/* the topSize more recently jobs must be returned in ascending start-time,
-			 * so the order of jobs set by the sortComp comparator must be reversed: */
-			reverseOrder = true;
+		if (topSize >= 0){
+			// jobs are sorted by descending creation-time (so that only the topSize first can be easily read):
+			sortComp = new JobComparator();
+			/* the topSize most recently jobs must be returned in descending creation-time,
+			 * so the order of jobs set by the sortComp comparator must NOT be reversed: */
+			reverseOrder = false;
 		}
 
 	}
@@ -266,13 +260,15 @@ public class JobListFilter {
 		}
 
 		// Filters the given jobs with the simple job filters:
-		UWSJob job;
-		while(jobList.hasNext()){
-			job = jobList.next();
+		if (topSize != 0){
+			UWSJob job;
+			while(jobList.hasNext()){
+				job = jobList.next();
 
-			// Apply the job filters on this job and retain it if it passes them:
-			if (match(job))
-				addJob(job);	// if a sort must be done, it is performed here by #addJob(UWSJob)
+				// Apply the job filters on this job and retain it if it passes them:
+				if (match(job))
+					addJob(job);	// if a sort must be done, it is performed here by #addJob(UWSJob)
+			}
 		}
 
 		// Return an iterator on this whole filtered job list:
@@ -311,21 +307,23 @@ public class JobListFilter {
 	}
 
 	/**
-	 * <p>Compare the start-time of 2 {@link UWSJob} instances.</p>
+	 * <p>Compare the 2 given {@link UWSJob} instances by using only their creation date/time.
+	 * The most recently created job is considered as inferior. So, this comparator aims to sort
+	 * jobs by descending creation date/time.</p>
 	 * 
 	 * <p><b>WARNING!<br/>
-	 * 	It must be ensured that all compared jobs have always a NOT-NULL startTime attribute.
+	 * 	It must be ensured that all compared jobs have always a NOT-NULL creationTime attribute.
 	 * 	Otherwise this comparator may fail or return an incorrect value.
 	 * </b></p>
 	 * 
 	 * @author Gr&eacute;gory Mantelet (ARI)
-	 * @version 4.2 (10/2015)
+	 * @version 4.2 (04/2016)
 	 * @since 4.2
 	 */
-	protected final static class LastSortComparator implements Comparator<UWSJob> {
+	public final static class JobComparator implements Comparator<UWSJob> {
 		@Override
 		public int compare(UWSJob o1, UWSJob o2){
-			return -(o1.getStartTime().compareTo(o2.getStartTime()));
+			return -(o1.getCreationTime().compareTo(o2.getCreationTime()));
 		}
 	}
 
@@ -337,22 +335,13 @@ public class JobListFilter {
 	 * 	the last constructor parameter to <code>true</code>.
 	 * </p>
 	 * 
-	 * <p><b><i>Example of use with the LAST filter:</i></b><br/>
-	 * 	This last feature is indeed particularly useful in the case of the filter LAST which must keep
-	 * 	the N more recent jobs but in ascending order. Thus, the given job list is sorted by descending order
-	 * 	on start time (so most recently started jobs first, and the oldest one at the end). Just the N first items
-	 * 	are kept but returned in a reverse order, so that having these jobs in ascending order on start time.
-	 * 	<br/>
-	 * 	Consequently, this {@link TopIterator} must be created with a topSize &gt; 0 and reverseOrder = true;
-	 * </p>
-	 * 
 	 * <p><i>Note:
 	 * 	This iterator does not support the remove operation ;
 	 * 	the function {@link #remove()} will then return an {@link UnsupportedOperationException}.
 	 * </i></p>
 	 * 
 	 * @author Gr&eacute;gory Mantelet (ARI)
-	 * @version 4.2 (10/2015)
+	 * @version 4.2 (04/2016)
 	 * @since 4.2
 	 */
 	protected final static class TopIterator implements Iterator<UWSJob> {
@@ -382,7 +371,7 @@ public class JobListFilter {
 			this.topSize = topSize;
 			this.reverseOrder = reverse;
 
-			if (reverseOrder && topSize > 0)
+			if (reverseOrder && topSize >= 0)
 				currentIndex = (list.size() <= topSize) ? list.size() : topSize;
 			else
 				currentIndex = reverseOrder ? list.size() : -1;
@@ -392,7 +381,7 @@ public class JobListFilter {
 
 		@Override
 		public boolean hasNext(){
-			return (topSize <= 0 || count + 1 <= topSize) && (reverseOrder ? currentIndex - 1 >= 0 : currentIndex + 1 < list.size());
+			return (topSize < 0 || count + 1 <= topSize) && (reverseOrder ? currentIndex - 1 >= 0 : currentIndex + 1 < list.size());
 		}
 
 		@Override

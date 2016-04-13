@@ -16,8 +16,8 @@ package uws.job.serializer;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
- *                       Astronomisches Rechen Institut (ARI) 
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ *                       Astronomisches Rechen Institut (ARI)
  */
 
 import java.io.UnsupportedEncodingException;
@@ -42,7 +42,7 @@ import uws.service.request.UploadFile;
  * Lets serializing any UWS resource in XML.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (04/2016)
  */
 public class XMLSerializer extends UWSSerializer {
 	private static final long serialVersionUID = 1L;
@@ -212,6 +212,7 @@ public class XMLSerializer extends UWSSerializer {
 		xml.append(newLine).append(getOwnerID(job, false));
 		xml.append(newLine).append(getPhase(job, false));
 		xml.append(newLine).append(getQuote(job, false));
+		xml.append(newLine).append(getCreationTime(job, false));
 		xml.append(newLine).append(getStartTime(job, false));
 		xml.append(newLine).append(getEndTime(job, false));
 		xml.append(newLine).append(getExecutionDuration(job, false));
@@ -302,6 +303,11 @@ public class XMLSerializer extends UWSSerializer {
 		else
 			xml.append('>').append(job.getQuote()).append("</quote>");
 		return xml.toString();
+	}
+
+	@Override
+	public String getCreationTime(final UWSJob job, final boolean root){
+		return (new StringBuffer(root ? getHeader() : "")).append("<creationTime").append(getUWSNamespace(root)).append('>').append(ISO8601Format.format(job.getCreationTime())).append("</creationTime>").toString();
 	}
 
 	@Override
@@ -611,7 +617,7 @@ public class XMLSerializer extends UWSSerializer {
 	 * <p>Returns a legal XML character corresponding to an input character.
 	 * Certain characters are simply illegal in XML (regardless of encoding).
 	 * If the input character is legal in XML, it is returned;
-	 * otherwise some other weird but legal character 
+	 * otherwise some other weird but legal character
 	 * (currently the inverted question mark, "\u00BF") is returned instead.</p>
 	 * 
 	 * <p><i>Note: copy of the STILTS VOSerializer.ensureLegalXml(char) function.</i></p>

@@ -11,6 +11,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -70,7 +71,7 @@ public class TestUserLimitedBlockingPolicy {
 	@Test
 	public void testBuildKey(){
 		UserLimitedBlockingPolicy policy = new UserLimitedBlockingPolicy();
-		UWSJob testJob = new UWSJob("123456", null, new UWSParameters(), -1, -1, -1, null, null);
+		UWSJob testJob = new UWSJob("123456", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null);
 
 		// With no job => ERROR!
 		try{
@@ -110,14 +111,14 @@ public class TestUserLimitedBlockingPolicy {
 		}
 
 		JobOwner user = new TestUser("myId");
-		UWSJob testJob1 = new UWSJob("123456", user, new UWSParameters(), -1, -1, -1, null, null);
-		UWSJob testJob2 = new UWSJob("654321", user, new UWSParameters(), -1, -1, -1, null, null);
+		UWSJob testJob1 = new UWSJob("123456", (new Date()).getTime(), user, new UWSParameters(), -1, -1, -1, null, null);
+		UWSJob testJob2 = new UWSJob("654321", (new Date()).getTime(), user, new UWSParameters(), -1, -1, -1, null, null);
 		final String key1 = "123456;myId", key2 = "654321;myId";
 
 		/* *************************** */
 		/* NO OLD BLOCKING REPLACEMENT */
 
-		// Test with just one job and only one allowed access => OK! 
+		// Test with just one job and only one allowed access => OK!
 		UserLimitedBlockingPolicy policy = new UserLimitedBlockingPolicy(10, 1, false);
 		assertEquals(5, policy.block(new Thread("1"), 5, testJob1, user, null));
 		assertEquals(key1, policy.buildKey(testJob1, user, null));
@@ -144,7 +145,7 @@ public class TestUserLimitedBlockingPolicy {
 		/* ************************ */
 		/* OLD BLOCKING REPLACEMENT */
 
-		// 1st test with just one job and only one allowed access => OK! 
+		// 1st test with just one job and only one allowed access => OK!
 		policy = new UserLimitedBlockingPolicy(10, 1, true);
 		assertEquals(5, policy.block(new Thread("1"), 5, testJob1, user, null));
 		assertEquals(key1, policy.buildKey(testJob1, user, null));
@@ -173,7 +174,7 @@ public class TestUserLimitedBlockingPolicy {
 
 		/* WITH NO old blocking replacement */
 
-		// 1st test with just one job and 2 allowed accesses => OK! 
+		// 1st test with just one job and 2 allowed accesses => OK!
 		policy = new UserLimitedBlockingPolicy(10, 2, false);
 		assertEquals(5, policy.block(new Thread("1"), 5, testJob1, user, null));
 		assertEquals(key1, policy.buildKey(testJob1, user, null));
@@ -202,7 +203,7 @@ public class TestUserLimitedBlockingPolicy {
 
 		/* WITH old blocking replacement */
 
-		// 1st test with just one job and 2 allowed accesses => OK! 
+		// 1st test with just one job and 2 allowed accesses => OK!
 		policy = new UserLimitedBlockingPolicy(10, 2, true);
 		assertEquals(5, policy.block(new Thread("1"), 5, testJob1, user, null));
 		assertEquals(key1, policy.buildKey(testJob1, user, null));
@@ -234,7 +235,7 @@ public class TestUserLimitedBlockingPolicy {
 	public void testUnblocked(){
 		JobOwner user = new TestUser("myId");
 		Thread thread1 = new Thread("1"), thread2 = new Thread("2");
-		UWSJob testJob = new UWSJob("123456", user, new UWSParameters(), -1, -1, -1, null, null);
+		UWSJob testJob = new UWSJob("123456", (new Date()).getTime(), user, new UWSParameters(), -1, -1, -1, null, null);
 		final String key = "123456;myId";
 
 		// Block 2 jobs:

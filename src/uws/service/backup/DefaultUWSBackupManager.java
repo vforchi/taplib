@@ -81,7 +81,7 @@ import uws.service.request.UploadFile;
  * <p>Another positive value will be considered as the frequency (in milliseconds) of the automatic backup (= {@link #saveAll()}).</p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (02/2016)
+ * @version 4.2 (04/2016)
  */
 public class DefaultUWSBackupManager implements UWSBackupManager {
 
@@ -830,7 +830,9 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 		String jobListName = null, jobId = null, ownerID = null, tmp;
 		JobInfo jobInfo = null;
 		//Date destruction=null;
-		long quote = UWSJob.UNLIMITED_DURATION, /*duration = UWSJob.UNLIMITED_DURATION, */startTime = -1, endTime = -1;
+		long quote = UWSJob.UNLIMITED_DURATION,
+				/*duration = UWSJob.UNLIMITED_DURATION, */startTime = -1,
+				endTime = -1, creationTime = -1;
 		HashMap<String,Object> inputParams = new HashMap<String,Object>(10);
 		//Map<String, Object> params = null;
 		ArrayList<Result> results = null;
@@ -865,7 +867,17 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 				else if (key.equalsIgnoreCase(UWSJob.PARAM_QUOTE))
 					quote = json.getLong(key);
 
-				// key=EXECUTION_DURATION:
+				// key=CREATION_TIME:
+				else if (key.equalsIgnoreCase(UWSJob.PARAM_CREATION_TIME)){
+					tmp = json.getString(key);
+					try{
+						Date d = ISO8601Format.parseToDate(tmp);
+						creationTime = d.getTime();
+					}catch(ParseException pe){
+						getLogger().logUWS(LogLevel.ERROR, json, "RESTORATION", "Incorrect date format for the '" + key + "' parameter!", pe);
+					}
+
+				}// key=EXECUTION_DURATION:
 				else if (key.equalsIgnoreCase(UWSJob.PARAM_EXECUTION_DURATION)){
 					long duration = json.getLong(key);
 					inputParams.put(UWSJob.PARAM_EXECUTION_DURATION, duration);
@@ -981,7 +993,7 @@ public class DefaultUWSBackupManager implements UWSBackupManager {
 			}
 
 			// Create the job:
-			UWSJob job = uws.getFactory().createJob(jobId, owner, uwsParams, quote, startTime, endTime, results, error);
+			UWSJob job = uws.getFactory().createJob(jobId, creationTime, owner, uwsParams, quote, startTime, endTime, results, error);
 
 			// Restore other job params if needed:
 			restoreOtherJobParams(json, job);

@@ -16,7 +16,7 @@ package uws.job.serializer;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -37,7 +37,7 @@ import uws.service.UWSUrl;
  * Lets serializing any UWS resource in JSON.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (04/2016)
  * 
  * @see Json4Uws
  */
@@ -95,6 +95,11 @@ public class JSONSerializer extends UWSSerializer {
 	@Override
 	public String getQuote(final UWSJob job, final boolean root) throws JSONException{
 		return Json4Uws.getJson(UWSJob.PARAM_QUOTE, job.getQuote()).toString();
+	}
+
+	@Override
+	public String getCreationTime(final UWSJob job, final boolean root) throws JSONException{
+		return Json4Uws.getJson(UWSJob.PARAM_CREATION_TIME, ISO8601Format.format(job.getCreationTime())).toString();
 	}
 
 	@Override

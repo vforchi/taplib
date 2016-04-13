@@ -16,7 +16,7 @@ package uws.service;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012,2014 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -39,7 +39,7 @@ import uws.service.request.RequestParser;
  * Let's creating UWS jobs, their threads and extracting their parameters from {@link HttpServletRequest}.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.1 (11/2014)
+ * @version 4.2 (04/2016)
  * 
  * @see UWS#getFactory()
  */
@@ -68,6 +68,7 @@ public interface UWSFactory {
 	 * </i>
 	 * 
 	 * @param jobID			ID of the job (NOT NULL).
+	 * @param creationTime	Creation date/time of the job (SHOULD NOT BE NEGATIVE OR NULL).
 	 * @param owner			Owner of the job.
 	 * @param params		List of all input UWS job parameters.
 	 * @param quote			Its quote (in seconds).
@@ -79,8 +80,10 @@ public interface UWSFactory {
 	 * @return				The created job.
 	 * 
 	 * @throws UWSException	If there is an error while creating the job.
+	 * 
+	 * @version 4.2
 	 */
-	public UWSJob createJob(final String jobID, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException;
+	public UWSJob createJob(final String jobID, final long creationTime, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException;
 
 	/**
 	 * Creates the thread which will executes the task described by the given {@link UWSJob} instance.

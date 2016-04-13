@@ -16,7 +16,7 @@ package tap;
  * You should have received a copy of the GNU Lesser General Public License
  * along with TAPLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012,2014 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -45,7 +45,7 @@ import uws.service.log.UWSLog.LogLevel;
  * </p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 2.0 (12/2014)
+ * @version 2.1 (04/2016)
  */
 public class TAPJob extends UWSJob {
 	private static final long serialVersionUID = 1L;
@@ -115,19 +115,22 @@ public class TAPJob extends UWSJob {
 	 * <p>Restore a job in a state defined by the given parameters.
 	 * The phase must be set separately with {@link #setPhase(uws.job.ExecutionPhase, boolean)}, where the second parameter is true.</p>
 	 * 
-	 * @param jobID		ID of the job.
-	 * @param owner		User who owns this job.
-	 * @param params	Set of not-standard UWS parameters (i.e. what is called by {@link UWSJob} as additional parameters ; they includes all TAP parameters).
-	 * @param quote		Quote of this job.
-	 * @param startTime	Date/Time at which this job started. <i>(if not null, it means the job execution was finished, so a endTime should be provided)</i>
-	 * @param endTime	Date/Time at which this job finished.
-	 * @param results	List of results. <i>NULL if the job has not been executed, has been aborted or finished with an error.</i>
-	 * @param error		Error with which this job ends.
+	 * @param jobID			ID of the job.
+	 * @param creationTime	Creation date/time of the job (SHOULD NOT BE NEGATIVE OR NULL).
+	 * @param owner			User who owns this job.
+	 * @param params		Set of not-standard UWS parameters (i.e. what is called by {@link UWSJob} as additional parameters ; they includes all TAP parameters).
+	 * @param quote			Quote of this job.
+	 * @param startTime		Date/Time at which this job started. <i>(if not null, it means the job execution was finished, so a endTime should be provided)</i>
+	 * @param endTime		Date/Time at which this job finished.
+	 * @param results		List of results. <i>NULL if the job has not been executed, has been aborted or finished with an error.</i>
+	 * @param error			Error with which this job ends.
 	 * 
 	 * @throws TAPException	If one of the given parameters has a forbidden or wrong value.
+	 * 
+	 * @version 2.1
 	 */
-	public TAPJob(final String jobID, final JobOwner owner, final TAPParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws TAPException{
-		super(jobID, owner, params, quote, startTime, endTime, results, error);
+	public TAPJob(final String jobID, final long creationTime, final JobOwner owner, final TAPParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws TAPException{
+		super(jobID, creationTime, owner, params, quote, startTime, endTime, results, error);
 		this.tapParams = params;
 		this.tapParams.check();
 	}

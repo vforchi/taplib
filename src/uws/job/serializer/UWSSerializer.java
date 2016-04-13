@@ -42,7 +42,7 @@ import uws.service.UWSUrl;
  * </ul>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (02/2016)
+ * @version 4.2 (04/2016)
  * 
  * @see XMLSerializer
  * @see JSONSerializer
@@ -94,6 +94,9 @@ public abstract class UWSSerializer implements Serializable {
 		// QUOTE:
 		else if (firstAttribute.equalsIgnoreCase(UWSJob.PARAM_QUOTE))
 			return job.getQuote() + "";
+		// CREATION TIME:
+		else if (firstAttribute.equalsIgnoreCase(UWSJob.PARAM_CREATION_TIME))
+			return ISO8601Format.format(job.getCreationTime());
 		// START TIME:
 		else if (firstAttribute.equalsIgnoreCase(UWSJob.PARAM_START_TIME))
 			return (job.getStartTime() == null) ? "" : ISO8601Format.format(job.getStartTime());
@@ -336,6 +339,21 @@ public abstract class UWSSerializer implements Serializable {
 	 * @throws Exception	If there is an error during the serialization.
 	 */
 	public abstract String getQuote(final UWSJob job, final boolean root) throws Exception;
+
+	/**
+	 * Serializes the creation date/time of the given job.
+	 * 
+	 * @param job			The job whose the creation date/time must be serialized.
+	 * @param root			<i>false</i> if the creation time to serialize will be included
+	 * 						in a top level serialization (for a creation time: job), <i>true</i> otherwise.
+	 * 
+	 * @return				The serialization of the job creation date/time.
+	 * 
+	 * @throws Exception	If there is an error during the serialization.
+	 * 
+	 * @since 4.2
+	 */
+	public abstract String getCreationTime(final UWSJob job, final boolean root) throws Exception;
 
 	/**
 	 * Serializes the start time of the given job.

@@ -144,7 +144,7 @@ public class TestJobListFilter {
 			filter = new JobListFilter(request);
 			fail("The provided parameter LAST is NOT positive. An error should have occurred.");
 		}catch(UWSException ue){
-			assertEquals("Incorrect LAST value: \"-10\"! A positive and not null integer was expected.", ue.getMessage());
+			assertEquals("Incorrect LAST value: \"-10\"! A positive integer was expected.", ue.getMessage());
 			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
 		}
 		try{
@@ -153,22 +153,32 @@ public class TestJobListFilter {
 			filter = new JobListFilter(request);
 			fail("The provided parameter LAST is NOT an integer. An error should have occurred.");
 		}catch(UWSException ue){
-			assertEquals("Incorrect LAST value: \"foo\"! A positive and not null integer was expected.", ue.getMessage());
+			assertEquals("Incorrect LAST value: \"foo\"! A positive integer was expected.", ue.getMessage());
 			assertEquals(UWSException.BAD_REQUEST, ue.getHttpErrorCode());
 		}
 
 		try{
-			// CORRECT 1 LAST PARAMETER => a StartedFilter should be set, as well as topSize, sortComp and reverseOrder!
+			// CORRECT 1 LAST PARAMETER => topSize, sortComp and reverseOrder should be set!
 			request.clearParams();
 			request.addParams("LAST", "10");
 			filter = new JobListFilter(request);
-			assertEquals(2, filter.filters.size());
+			assertEquals(1, filter.filters.size());
 			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-			assertEquals(StartedFilter.class, filter.filters.get(1).getClass());
 			assertEquals(10, filter.topSize);
-			assertTrue(filter.reverseOrder);
+			assertFalse(filter.reverseOrder);
 			assertNotNull(filter.sortComp);
-			assertEquals(JobListFilter.LastSortComparator.class, filter.sortComp.getClass());
+			assertEquals(JobListFilter.JobComparator.class, filter.sortComp.getClass());
+
+			// SPECIAL CASE OF LAST=0 => same behavior as for a positive value
+			request.clearParams();
+			request.addParams("LAST", "0");
+			filter = new JobListFilter(request);
+			assertEquals(1, filter.filters.size());
+			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
+			assertEquals(0, filter.topSize);
+			assertFalse(filter.reverseOrder);
+			assertNotNull(filter.sortComp);
+			assertEquals(JobListFilter.JobComparator.class, filter.sortComp.getClass());
 
 			// CORRECT 3 LAST PARAMETERS => Only the smallest value should be kept ; a StartedFilter should be set, as well as topSize, sortComp and reverseOrder!
 			request.clearParams();
@@ -176,13 +186,12 @@ public class TestJobListFilter {
 			request.addParams("last", "5");
 			request.addParams("LAST", "7");
 			filter = new JobListFilter(request);
-			assertEquals(2, filter.filters.size());
+			assertEquals(1, filter.filters.size());
 			assertEquals(NoArchivedFilter.class, filter.filters.get(0).getClass());
-			assertEquals(StartedFilter.class, filter.filters.get(1).getClass());
 			assertEquals(5, filter.topSize);
-			assertTrue(filter.reverseOrder);
+			assertFalse(filter.reverseOrder);
 			assertNotNull(filter.sortComp);
-			assertEquals(JobListFilter.LastSortComparator.class, filter.sortComp.getClass());
+			assertEquals(JobListFilter.JobComparator.class, filter.sortComp.getClass());
 		}catch(UWSException ue){
 			ue.printStackTrace(System.err);
 			fail("No error should happen since all provided LAST parameters are correct.");
@@ -262,15 +271,14 @@ public class TestJobListFilter {
 			request.addParams("AFTER", "2015-02-10T12:00:00");
 			request.addParams("AFTER", "2013-01-10T12:00:00");
 			filter = new JobListFilter(request);
-			assertEquals(3, filter.filters.size());
+			assertEquals(2, filter.filters.size());
 			assertEquals(PhasesFilter.class, filter.filters.get(0).getClass());
 			assertEquals(1, ((PhasesFilter)filter.filters.get(0)).phases.size());
 			assertEquals(ExecutionPhase.EXECUTING, ((PhasesFilter)filter.filters.get(0)).phases.get(0));
 			assertEquals(AfterFilter.class, filter.filters.get(1).getClass());
 			assertEquals("2015-02-10T12:00:00", ISO8601Format.format(((AfterFilter)filter.filters.get(1)).getDate()));
-			assertEquals(StartedFilter.class, filter.filters.get(2).getClass());
 			assertEquals(5, filter.topSize);
-			assertTrue(filter.reverseOrder);
+			assertFalse(filter.reverseOrder);
 			assertNotNull(filter.sortComp);
 		}catch(UWSException ue){
 			ue.printStackTrace(System.err);
@@ -282,43 +290,43 @@ public class TestJobListFilter {
 	public void testFilter(){
 		ArrayList<UWSJob> jobs = new ArrayList<UWSJob>(10);
 		try{
-			// 0 -> PENDING 
-			UWSJob test = new UWSJob("0", null, new UWSParameters(), -1, -1, -1, null, null);
+			// 0 -> PENDING
+			UWSJob test = new UWSJob("0", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null);
 			jobs.add(test);
 			// 1 -> QUEUED
-			test = new UWSJob("1", null, new UWSParameters(), -1, -1, -1, null, null);
+			test = new UWSJob("1", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null);
 			test.setPhase(ExecutionPhase.QUEUED, true);
 			jobs.add(test);
 			// 2 -> ABORTED
-			test = new UWSJob("2", null, new UWSParameters(), -1, (new GregorianCalendar(2010, 2, 1)).getTimeInMillis(), -1, null, null);
+			test = new UWSJob("2", (new GregorianCalendar(2010, 2, 1)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2010, 2, 1)).getTimeInMillis(), -1, null, null);
 			test.setPhase(ExecutionPhase.ABORTED, true);
 			jobs.add(test);
 			// 3 -> ARCHIVED
-			test = new UWSJob("3", null, new UWSParameters(), -1, (new GregorianCalendar(2010, 1, 12)).getTimeInMillis(), (new GregorianCalendar(2010, 1, 13)).getTimeInMillis(), null, null);
+			test = new UWSJob("3", (new GregorianCalendar(2010, 1, 12)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2010, 1, 12)).getTimeInMillis(), (new GregorianCalendar(2010, 1, 13)).getTimeInMillis(), null, null);
 			test.setPhase(ExecutionPhase.ARCHIVED, true);
 			jobs.add(test);
 			// 4 -> EXECUTING
-			test = new UWSJob("4", null, new UWSParameters(), -1, (new GregorianCalendar(2015, 2, 2)).getTimeInMillis(), -1, null, null);
+			test = new UWSJob("4", (new GregorianCalendar(2015, 2, 2)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2015, 2, 2)).getTimeInMillis(), -1, null, null);
 			test.setPhase(ExecutionPhase.EXECUTING, true);
 			jobs.add(test);
 			// 5 -> EXECUTING
-			test = new UWSJob("5", null, new UWSParameters(), -1, (new GregorianCalendar(2014, 8, 2)).getTimeInMillis(), -1, null, null);
+			test = new UWSJob("5", (new GregorianCalendar(2014, 8, 2)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2014, 8, 2)).getTimeInMillis(), -1, null, null);
 			test.setPhase(ExecutionPhase.EXECUTING, true);
 			jobs.add(test);
 			// 6 -> ERROR
-			test = new UWSJob("6", null, new UWSParameters(), -1, (new GregorianCalendar(2015, 3, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
+			test = new UWSJob("6", (new GregorianCalendar(2015, 3, 3)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2015, 3, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
 			test.setPhase(ExecutionPhase.ERROR, true);
 			jobs.add(test);
 			// 7 -> ERROR
-			test = new UWSJob("7", null, new UWSParameters(), -1, (new GregorianCalendar(2015, 8, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
+			test = new UWSJob("7", (new GregorianCalendar(2015, 8, 3)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2015, 8, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
 			test.setPhase(ExecutionPhase.EXECUTING, true);
 			jobs.add(test);
 			// 8 -> ERROR
-			test = new UWSJob("8", null, new UWSParameters(), -1, (new GregorianCalendar(2015, 2, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
+			test = new UWSJob("8", (new GregorianCalendar(2015, 2, 3)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2015, 2, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
 			test.setPhase(ExecutionPhase.EXECUTING, true);
 			jobs.add(test);
 			// 9 -> ERROR
-			test = new UWSJob("9", null, new UWSParameters(), -1, (new GregorianCalendar(2015, 1, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
+			test = new UWSJob("9", (new GregorianCalendar(2015, 1, 3)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2015, 1, 3)).getTimeInMillis(), (new GregorianCalendar(2015, 9, 4)).getTimeInMillis(), null, new ErrorSummary("", ErrorType.FATAL));
 			test.setPhase(ExecutionPhase.EXECUTING, true);
 			jobs.add(test);
 		}catch(UWSException ex){
@@ -408,27 +416,85 @@ public class TestJobListFilter {
 		assertEquals("7", it.next().getJobId());
 		assertFalse(it.hasNext());
 
-		/* ******************************************************************************************************** */
-		/* 1 PHASE filter + 1 AFTER filter, 3 last jobs, sort by ascending startTime => simulation of LAST "filter" */
-		filter.filters.add(new StartedFilter());
-		filter.topSize = 3;
+		/* ********************************************************************************** */
+		/* 1 PHASE filter + 1 AFTER filter, the 4 first jobs, sort by startTime, WITH reverse */
+		filter.topSize = 4;
 		filter.sortComp = new Comparator<UWSJob>(){
 			@Override
 			public int compare(UWSJob o1, UWSJob o2){
-				return -(o1.getStartTime().compareTo(o2.getStartTime()));
+				return o1.getStartTime().compareTo(o2.getStartTime());
 			}
 		};
 		filter.reverseOrder = true;
 
 		it = filter.filter(jobs.iterator());
 		assertTrue(it.hasNext());
-		assertEquals("4", it.next().getJobId());
+		assertEquals("7", it.next().getJobId());
 		assertTrue(it.hasNext());
 		assertEquals("8", it.next().getJobId());
+		assertTrue(it.hasNext());
+		assertEquals("4", it.next().getJobId());
+		assertTrue(it.hasNext());
+		assertEquals("9", it.next().getJobId());
+		assertFalse(it.hasNext());
+
+		/* ************************************************************************************************************ */
+		/* 1 PHASE filter + 1 AFTER filter, 3 last jobs, sort by descending creationTime => simulation of LAST "filter" */
+		filter.topSize = 3;
+		filter.sortComp = new Comparator<UWSJob>(){
+			@Override
+			public int compare(UWSJob o1, UWSJob o2){
+				return -(o1.getCreationTime().compareTo(o2.getCreationTime()));
+			}
+		};
+		filter.reverseOrder = false;
+
+		it = filter.filter(jobs.iterator());
+		assertTrue(it.hasNext());
+		assertEquals("7", it.next().getJobId());
+		assertTrue(it.hasNext());
+		assertEquals("8", it.next().getJobId());
+		assertTrue(it.hasNext());
+		assertEquals("4", it.next().getJobId());
+		assertFalse(it.hasNext());
+
+		/* ***************************************************************************************************************** */
+		/* No filter (except to avoid ARCHIVED), 3 last jobs, sort by descending creationTime => simulation of LAST "filter" */
+		filter.filters.clear();
+		filter.filters.add(new NoArchivedFilter());
+		filter.topSize = 3;
+		filter.sortComp = new Comparator<UWSJob>(){
+			@Override
+			public int compare(UWSJob o1, UWSJob o2){
+				return -(o1.getCreationTime().compareTo(o2.getCreationTime()));
+			}
+		};
+		filter.reverseOrder = false;
+
+		it = filter.filter(jobs.iterator());
+		assertTrue(it.hasNext());
+		assertEquals("1", it.next().getJobId());
+		assertTrue(it.hasNext());
+		assertEquals("0", it.next().getJobId());
 		assertTrue(it.hasNext());
 		assertEquals("7", it.next().getJobId());
 		assertFalse(it.hasNext());
 
+		/* *********************************************************************************************************************************************** */
+		/* No filter (except to avoid ARCHIVED), 0 last jobs, sort by descending creationTime => simulation of LAST "filter" WITH THE SPECIAL VALUE LAST=0 */
+		filter.filters.clear();
+		filter.filters.add(new NoArchivedFilter());
+		filter.topSize = 0;
+		filter.sortComp = new Comparator<UWSJob>(){
+			@Override
+			public int compare(UWSJob o1, UWSJob o2){
+				return -(o1.getCreationTime().compareTo(o2.getCreationTime()));
+			}
+		};
+		filter.reverseOrder = false;
+
+		it = filter.filter(jobs.iterator());
+		assertFalse(it.hasNext());
 	}
 
 	@Test
@@ -437,12 +503,12 @@ public class TestJobListFilter {
 		filter.sortComp = new Comparator<UWSJob>(){
 			@Override
 			public int compare(UWSJob o1, UWSJob o2){
-				return o1.getStartTime().compareTo(o2.getStartTime());
+				return o1.getCreationTime().compareTo(o2.getCreationTime());
 			}
 		};
 
-		filter.addJob(new UWSJob("123456", null, new UWSParameters(), -1, (new GregorianCalendar(2013, 3, 10)).getTimeInMillis(), -1, null, null));
-		filter.addJob(new UWSJob("654321", null, new UWSParameters(), -1, (new GregorianCalendar(2010, 3, 10)).getTimeInMillis(), -1, null, null));
+		filter.addJob(new UWSJob("123456", (new GregorianCalendar(2013, 3, 10)).getTimeInMillis(), null, new UWSParameters(), -1, -1, -1, null, null));
+		filter.addJob(new UWSJob("654321", (new GregorianCalendar(2010, 3, 10)).getTimeInMillis(), null, new UWSParameters(), -1, -1, -1, null, null));
 
 		assertEquals("654321", filter.jobList.get(0).getJobId());
 		assertEquals("123456", filter.jobList.get(1).getJobId());
@@ -452,38 +518,34 @@ public class TestJobListFilter {
 	public void testMatch(){
 		JobListFilter filter = new JobListFilter();
 
-		/* ***************** */
-		/* Only started jobs */
-		filter.filters.add(new StartedFilter());
+		/* *********** */
+		/* No filter */
 
 		// No job => Nope!
 		assertFalse(filter.match(null));
-		// No started job => Nope!
-		assertFalse(filter.match(new UWSJob(new UWSParameters())));
-
-		// Started job => OK!
-		assertTrue(filter.match(new UWSJob("123456", null, new UWSParameters(), -1, (new Date()).getTime(), -1, null, null)));
+		// A job => Yes!
+		assertTrue(filter.match(new UWSJob(new UWSParameters())));
 
 		/* ********************************************** */
-		/* Started jobs and only those in EXECUTING phase */
+		/* Only jobs in EXECUTING phase */
 		filter.filters.add(new PhasesFilter(ExecutionPhase.EXECUTING));
 
 		// No job => Nope!
 		assertFalse(filter.match(null));
-		// Not started job => Nope!
+		// Not an EXECUTING job => Nope!
 		assertFalse(filter.match(new UWSJob(new UWSParameters())));
 
-		UWSJob testJob = new UWSJob("123456", null, new UWSParameters(), -1, (new Date()).getTime(), -1, null, null);
+		UWSJob testJob = new UWSJob("123456", (new Date()).getTime(), null, new UWSParameters(), -1, (new Date()).getTime(), -1, null, null);
 		try{
-			// Started and EXECUTING job => OK!
+			// EXECUTING job => OK!
 			testJob.setPhase(ExecutionPhase.EXECUTING, true);
 			assertTrue(filter.match(testJob));
 
-			// Started and ARCHIVED job => Nope!
+			// ARCHIVED job => Nope!
 			testJob.setPhase(ExecutionPhase.ARCHIVED, true);
 			assertFalse(filter.match(testJob));
 
-			// Started and ERROR job => Nope!
+			// ERROR job => Nope!
 			testJob.setPhase(ExecutionPhase.ERROR, true);
 			assertFalse(filter.match(testJob));
 		}catch(UWSException ex){
@@ -492,7 +554,7 @@ public class TestJobListFilter {
 		}
 
 		/* ********************************************************** */
-		/* Started jobs and only those in EXECUTING or ARCHIVED phase */
+		/* Only jobs in EXECUTING or ARCHIVED phase */
 		((PhasesFilter)filter.filters.get(filter.filters.size() - 1)).add(ExecutionPhase.ARCHIVED);
 
 		// No job => Nope!
@@ -500,17 +562,17 @@ public class TestJobListFilter {
 		// Not started job => Nope!
 		assertFalse(filter.match(new UWSJob(new UWSParameters())));
 
-		testJob = new UWSJob("123456", null, new UWSParameters(), -1, (new Date()).getTime(), -1, null, null);
+		testJob = new UWSJob("123456", (new Date()).getTime(), null, new UWSParameters(), -1, (new Date()).getTime(), -1, null, null);
 		try{
-			// Started and EXECUTING job => OK!
+			// EXECUTING job => OK!
 			testJob.setPhase(ExecutionPhase.EXECUTING, true);
 			assertTrue(filter.match(testJob));
 
-			// Started and ARCHIVED job => OK!
+			// ARCHIVED job => OK!
 			testJob.setPhase(ExecutionPhase.ARCHIVED, true);
 			assertTrue(filter.match(testJob));
 
-			// Started and ERROR job => Nope!
+			// ERROR job => Nope!
 			testJob.setPhase(ExecutionPhase.ERROR, true);
 			assertFalse(filter.match(testJob));
 		}catch(UWSException ex){
@@ -519,7 +581,7 @@ public class TestJobListFilter {
 		}
 
 		/* ***************************************************************************** */
-		/* Started jobs AND only those in EXECUTING or ARCHIVED phase AND after 1/3/2010 */
+		/* Only jobs in EXECUTING or ARCHIVED phase AND after 1/3/2010 */
 		filter.filters.add(new AfterFilter((new GregorianCalendar(2010, 2, 1)).getTime()));
 
 		// No job => Nope!
@@ -527,17 +589,17 @@ public class TestJobListFilter {
 		// Not started job => Nope!
 		assertFalse(filter.match(new UWSJob(new UWSParameters())));
 
-		testJob = new UWSJob("123456", null, new UWSParameters(), -1, (new GregorianCalendar(2010, 2, 2)).getTimeInMillis(), -1, null, null);
+		testJob = new UWSJob("123456", (new GregorianCalendar(2010, 2, 2)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2010, 2, 2)).getTimeInMillis(), -1, null, null);
 		try{
-			// Started and EXECUTING job, and after 1/3/2010 => OK!
+			// EXECUTING job, and after 1/3/2010 => OK!
 			testJob.setPhase(ExecutionPhase.EXECUTING, true);
 			assertTrue(filter.match(testJob));
 
-			// Started and ARCHIVED job, and after 1/3/2010 => OK!
+			// ARCHIVED job, and after 1/3/2010 => OK!
 			testJob.setPhase(ExecutionPhase.ARCHIVED, true);
 			assertTrue(filter.match(testJob));
 
-			// Started and ERROR job, and after 1/3/2010 => Nope!
+			// ERROR job, and after 1/3/2010 => Nope!
 			testJob.setPhase(ExecutionPhase.ERROR, true);
 			assertFalse(filter.match(testJob));
 		}catch(UWSException ex){
@@ -545,17 +607,17 @@ public class TestJobListFilter {
 			fail("Can not force the execution phase of the job! (see console for more details)");
 		}
 
-		testJob = new UWSJob("123456", null, new UWSParameters(), -1, (new GregorianCalendar(2010, 1, 1)).getTimeInMillis(), -1, null, null);
+		testJob = new UWSJob("123456", (new GregorianCalendar(2010, 1, 1)).getTimeInMillis(), null, new UWSParameters(), -1, (new GregorianCalendar(2010, 1, 1)).getTimeInMillis(), -1, null, null);
 		try{
-			// Started and EXECUTING job, and before 1/3/2010 => Nope!
+			// EXECUTING job, and before 1/3/2010 => Nope!
 			testJob.setPhase(ExecutionPhase.EXECUTING, true);
 			assertFalse(filter.match(testJob));
 
-			// Started and ARCHIVED job, and before 1/3/2010 => Nope!
+			// ARCHIVED job, and before 1/3/2010 => Nope!
 			testJob.setPhase(ExecutionPhase.ARCHIVED, true);
 			assertFalse(filter.match(testJob));
 
-			// Started and ERROR job, and before 1/3/2010 => Nope!
+			// ERROR job, and before 1/3/2010 => Nope!
 			testJob.setPhase(ExecutionPhase.ERROR, true);
 			assertFalse(filter.match(testJob));
 		}catch(UWSException ex){
@@ -567,11 +629,11 @@ public class TestJobListFilter {
 	@Test
 	public void testTopIterator(){
 		ArrayList<UWSJob> jobs = new ArrayList<UWSJob>(5);
-		jobs.add(new UWSJob("0", null, new UWSParameters(), -1, -1, -1, null, null));
-		jobs.add(new UWSJob("1", null, new UWSParameters(), -1, -1, -1, null, null));
-		jobs.add(new UWSJob("2", null, new UWSParameters(), -1, -1, -1, null, null));
-		jobs.add(new UWSJob("3", null, new UWSParameters(), -1, -1, -1, null, null));
-		jobs.add(new UWSJob("4", null, new UWSParameters(), -1, -1, -1, null, null));
+		jobs.add(new UWSJob("0", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null));
+		jobs.add(new UWSJob("1", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null));
+		jobs.add(new UWSJob("2", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null));
+		jobs.add(new UWSJob("3", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null));
+		jobs.add(new UWSJob("4", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null));
 
 		// Just the 3 first items in same order:
 		TopIterator it = new TopIterator(jobs, 3, false);

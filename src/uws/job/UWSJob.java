@@ -130,12 +130,12 @@ import uws.service.request.UploadFile;
  * 		<b>{@link #setJobInfo(JobInfo)}:</b>
  * 					Free additional job information may be added to the job description. These information can be set/removed/accessed <strong>at any time</strong> through the
  * 					UWSLibrary API <strong>ONLY</strong>. They are not designed to be parameters or results, but additional information (e.g. execution statistics, ...)
- * 					that the UWS service implementation wants to share with the clients. 
+ * 					that the UWS service implementation wants to share with the clients.
  * 	</li>
  * </ul>
  * 
  * @author	Gr&eacute;gory Mantelet (CDS;ARI)
- * @version	4.2 (02/2016)
+ * @version	4.2 (04/2016)
  */
 public class UWSJob extends SerializableUWSObject {
 	private static final long serialVersionUID = 1L;
@@ -151,6 +151,9 @@ public class UWSJob extends SerializableUWSObject {
 
 	/** Name of the parameter <i>jobId</i>. */
 	public static final String PARAM_JOB_ID = "jobId";
+
+	/** Name of the parameter <i>creationTime</i>. */
+	public static final String PARAM_CREATION_TIME = "creationTime";
 
 	/** Name of the parameter <i>runId</i>. */
 	public static final String PARAM_RUN_ID = "runId";
@@ -220,6 +223,11 @@ public class UWSJob extends SerializableUWSObject {
 	 * by the function {@link #generateJobId()}.
 	 * To change the way this ID is generated or its format you must override this function.</i> */
 	protected final String jobId;
+
+	/** Date of the initial creation of this job.<BR />
+	 * <i><u>Note:</u> This attribute can be set only automatically at creation by the UWS service
+	 * and can not be set or changed by a user (even its owner).</i>*/
+	protected final Date creationTime;
 
 	/** The identifier of the creator of this job.<BR />
 	 * <i><u>Note:</u> This object will not exist for all invocations of the UWS conformant protocol,
@@ -326,6 +334,8 @@ public class UWSJob extends SerializableUWSObject {
 	 * @see UWSParameters#init()
 	 */
 	public UWSJob(JobOwner owner, final UWSParameters params){
+		creationTime = new Date();
+
 		this.owner = owner;
 
 		phase = new JobPhase(this);
@@ -358,6 +368,7 @@ public class UWSJob extends SerializableUWSObject {
 	 * </i></p>
 	 * 
 	 * @param jobID			The ID of this job (NOT NULL).
+	 * @param creationTime	Its creation date/time (SHOULD NOT BE NEGATIVE OR NULL).
 	 * @param owner			Its owner.
 	 * @param params		UWS standard and non-standard parameters.
 	 * @param quote			Its quote (in seconds).
@@ -368,9 +379,15 @@ public class UWSJob extends SerializableUWSObject {
 	 * 
 	 * @throws NullPointerException	If the given ID is NULL.
 	 */
-	public UWSJob(final String jobID, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws NullPointerException{
+	public UWSJob(final String jobID, final long creationTime, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws NullPointerException{
 		if (jobID == null)
 			throw new NullPointerException("Missing job ID => impossible to build a Job without a valid ID!");
+
+		this.creationTime = (creationTime <= 0) ? new Date() : new Date(creationTime);
+		/* Note: if no creation date is provided, it may be because we are getting the data from an old backup file.
+		 *       Except this missing information, the rest of the job properties may be ok, so there is
+		 *       no need to throw an error for an accessory property like the creation time.
+		 *       So, the current date is set instead. */
 
 		this.jobId = jobID;
 		this.owner = owner;
@@ -410,7 +427,7 @@ public class UWSJob extends SerializableUWSObject {
 			try{
 				setPhase(p, true);
 			}catch(UWSException ue){
-				// Can never append because the "force" parameter is true! 
+				// Can never append because the "force" parameter is true!
 			}
 		}
 
@@ -458,6 +475,8 @@ public class UWSJob extends SerializableUWSObject {
 		name = name.trim();
 		if (name.equalsIgnoreCase(PARAM_JOB_ID))
 			return jobId;
+		else if (name.equalsIgnoreCase(PARAM_CREATION_TIME))
+			return creationTime;
 		else if (name.equalsIgnoreCase(PARAM_OWNER))
 			return owner;
 		else if (name.equalsIgnoreCase(PARAM_PHASE))
@@ -807,6 +826,15 @@ public class UWSJob extends SerializableUWSObject {
 	}
 
 	/**
+	 * Gets the creation date/time of this job.
+	 * 
+	 * @return	The job creation date/time.
+	 */
+	public final Date getCreationTime(){
+		return creationTime;
+	}
+
+	/**
 	 * <p>Gets the RunID of this job given by the UWS user (presumed to be the owner of this job).
 	 * This ID isn't the one used to access to this job thanks to the jobs list: it is more likely a label/name than an ID => it is not unique.</p>
 	 * 
@@ -1013,7 +1041,7 @@ public class UWSJob extends SerializableUWSObject {
 	 * @see #applyPhaseParam(JobOwner)
 	 */
 	public boolean addOrUpdateParameters(UWSParameters params, final JobOwner user) throws UWSException{
-		// The job can be modified ONLY IF in PENDING phase: 
+		// The job can be modified ONLY IF in PENDING phase:
 		if (!phase.isJobUpdatable())
 			throw new UWSException(UWSException.FORBIDDEN, "Forbidden parameters modification: the job is not any more in the PENDING phase!");
 
@@ -1305,7 +1333,7 @@ public class UWSJob extends SerializableUWSObject {
 	 * </i></p>
 	 * 
 	 * @return	<code>true</code> if this job has additional information,
-	 *        	<code>false</code> otherwise. 
+	 *        	<code>false</code> otherwise.
 	 * 
 	 * @since 4.2
 	 */
@@ -1396,7 +1424,7 @@ public class UWSJob extends SerializableUWSObject {
 	}
 
 	/**
-	 * Stop/Cancel this job when its maximum execution duration has been reached. 
+	 * Stop/Cancel this job when its maximum execution duration has been reached.
 	 * 
 	 * @author Gr&eacute;gory Mantelet (CDS;ARI)
 	 * @version 4.1 (09/2014)

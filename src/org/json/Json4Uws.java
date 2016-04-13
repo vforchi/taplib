@@ -40,7 +40,7 @@ import uws.service.UWSUrl;
  * Useful conversion functions from UWS to JSON.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (02/2016)
+ * @version 4.2 (04/2016)
  */
 public final class Json4Uws {
 
@@ -165,6 +165,7 @@ public final class Json4Uws {
 				if (job.getOwner() != null)
 					json.put(UWSJob.PARAM_OWNER, job.getOwner().getPseudo());
 				json.put(UWSJob.PARAM_QUOTE, job.getQuote());
+				json.put(UWSJob.PARAM_CREATION_TIME, ISO8601Format.format(job.getCreationTime()));
 				if (job.getStartTime() != null)
 					json.put(UWSJob.PARAM_START_TIME, ISO8601Format.format(job.getStartTime()));
 				if (job.getEndTime() != null)

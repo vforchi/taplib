@@ -16,7 +16,7 @@ package tap;
  * You should have received a copy of the GNU Lesser General Public License
  * along with TAPLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -28,6 +28,11 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import adql.db.DBChecker;
+import adql.parser.ADQLQueryFactory;
+import adql.parser.ParseException;
+import adql.parser.QueryChecker;
+import adql.query.ADQLQuery;
 import tap.db.DBConnection;
 import tap.error.DefaultTAPErrorWriter;
 import tap.metadata.TAPMetadata;
@@ -42,18 +47,13 @@ import uws.job.user.JobOwner;
 import uws.service.UWSService;
 import uws.service.backup.UWSBackupManager;
 import uws.service.error.ServiceErrorWriter;
-import adql.db.DBChecker;
-import adql.parser.ADQLQueryFactory;
-import adql.parser.ParseException;
-import adql.parser.QueryChecker;
-import adql.query.ADQLQuery;
 
 /**
  * Default implementation of most of the {@link TAPFactory} function.
  * Only the functions related with the database connection stay abstract.
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 2.0 (02/2015)
+ * @version 2.1 (04/2016)
  */
 public abstract class AbstractTAPFactory extends TAPFactory {
 
@@ -264,9 +264,9 @@ public abstract class AbstractTAPFactory extends TAPFactory {
 	 * </p>
 	 */
 	@Override
-	protected TAPJob createTAPJob(final String jobId, final JobOwner owner, final TAPParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException{
+	protected TAPJob createTAPJob(final String jobId, final long creationTime, final JobOwner owner, final TAPParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException{
 		try{
-			return new TAPJob(jobId, owner, params, quote, startTime, endTime, results, error);
+			return new TAPJob(jobId, creationTime, owner, params, quote, startTime, endTime, results, error);
 		}catch(TAPException te){
 			if (te.getCause() != null && te.getCause() instanceof UWSException)
 				throw (UWSException)te.getCause();

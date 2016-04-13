@@ -16,7 +16,7 @@ package uws.service;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2012-2015 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2016 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -135,7 +135,7 @@ import uws.service.wait.BlockingPolicy;
  * </p>
  * 
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (04/2016)
  */
 public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory {
 	private static final long serialVersionUID = 1L;
@@ -183,7 +183,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	/** Lets writing/formatting any exception/throwable in a HttpServletResponse. */
 	protected ServiceErrorWriter errorWriter;
 
-	/** 
+	/**
 	 * <p>Strategy to use for the blocking/wait process concerning the
 	 * {@link #doJobSummary(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)} action.</p>
 	 * <p><i>If NULL, the standard strategy will be used: wait exactly the time asked by the user
@@ -753,8 +753,8 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	}
 
 	@Override
-	public UWSJob createJob(final String jobID, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException{
-		return new UWSJob(jobID, owner, params, quote, startTime, endTime, results, error);
+	public UWSJob createJob(final String jobID, final long creationTime, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException{
+		return new UWSJob(jobID, creationTime, owner, params, quote, startTime, endTime, results, error);
 	}
 
 	@Override
