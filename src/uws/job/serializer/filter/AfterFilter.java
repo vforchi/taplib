@@ -16,7 +16,7 @@ package uws.job.serializer.filter;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  * 
- * Copyright 2015 - Astronomisches Rechen Institut (ARI) 
+ * Copyright 2015-2016 - Astronomisches Rechen Institut (ARI)
  */
 
 import java.util.Date;
@@ -24,15 +24,11 @@ import java.util.Date;
 import uws.job.UWSJob;
 
 /**
- * <p>Job filter based on the start time.
- * Only jobs that have started after a given date (not-included) are kept.</p>
- * 
- * <p><i><b>Important note:</b>
- * 	This filter will also reject all jobs that have not yet started.
- * </i></p>
+ * Job filter based on the creation time.
+ * Only jobs that have been created after a given date (not-included) are kept.
  * 
  * @author Gr&eacute;gory Mantelet (ARI)
- * @version 4.2 (10/2015)
+ * @version 4.2 (04/2016)
  * @since 4.2
  */
 public final class AfterFilter implements JobFilter {
@@ -55,8 +51,8 @@ public final class AfterFilter implements JobFilter {
 	}
 
 	/**
-	 * Get the date which filters jobs on their startTime.
-	 * Only jobs started after this date will be retained. 
+	 * Get the date which filters jobs on their creationTime.
+	 * Only jobs created after this date will be retained.
 	 * 
 	 * @return	The limit date.
 	 */
@@ -66,7 +62,7 @@ public final class AfterFilter implements JobFilter {
 
 	@Override
 	public boolean match(final UWSJob job){
-		return (job != null) && (job.getStartTime() != null) && (job.getStartTime().after(limit));
+		return (job != null) && (job.getCreationTime().after(limit));
 	}
 
 }

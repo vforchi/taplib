@@ -21,7 +21,7 @@ public class TestAfterFilter {
 
 		// 1 second after => OK!
 		cal.set(2010, 3, 1, 1, 0, 1);
-		UWSJob testJob = new UWSJob("123456", cal.getTimeInMillis(), null, new UWSParameters(), -1, cal.getTimeInMillis(), -1, null, null);
+		UWSJob testJob = new UWSJob("123456", cal.getTimeInMillis(), null, new UWSParameters(), -1, -1, -1, null, null);
 		assertTrue(filter.match(testJob));
 
 		// Now => OK!
@@ -38,9 +38,12 @@ public class TestAfterFilter {
 		testJob = new UWSJob("123456", cal.getTimeInMillis(), null, new UWSParameters(), -1, cal.getTimeInMillis(), -1, null, null);
 		assertFalse(filter.match(testJob));
 
-		// No start time => Nop!
+		// No start time => does not matter...we are working on the creationTime now
+		/* Note: this test is here just to ensure we are effectively working on the creationTime! */
 		testJob = new UWSJob("123456", cal.getTimeInMillis(), null, new UWSParameters(), -1, -1, -1, null, null);
 		assertFalse(filter.match(testJob));
+		testJob = new UWSJob("123456", (new Date()).getTime(), null, new UWSParameters(), -1, -1, -1, null, null);
+		assertTrue(filter.match(testJob));
 
 		// No job => Nop!
 		assertFalse(filter.match(null));
