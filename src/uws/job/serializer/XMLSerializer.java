@@ -247,17 +247,31 @@ public class XMLSerializer extends UWSSerializer {
 		}
 
 		StringBuffer xml = new StringBuffer("<jobref id=\"");
-		xml.append(escapeXMLAttribute(job.getJobId())).append('"');
-		/* NOTE: NO ATTRIBUTE "runId" IN THE XML SCHEMA!
-		 * if (job.getRunId() != null && job.getRunId().length() > 0)
-		 * 	xml.append("\" runId=\"").append(escapeXMLAttribute(job.getRunId()));
-		 */
 
-		// The XLink attributes are optional. So if no URL is available for this Job reference, none is written here:
+		// [MANDATORY] Set the job ID as an attribute:
+		xml.append(escapeXMLAttribute(job.getJobId())).append('"');
+
+		// [OPTIONAL] Set the XLink attributes. If no URL is available for this Job reference, none is written here:
 		if (url != null)
 			xml.append(" xlink:type=\"simple\" xlink:href=\"").append(escapeXMLAttribute(url)).append('"');
 
-		xml.append(">\n\t\t").append(getPhase(job, false)).append("\n\t</jobref>");
+		xml.append('>');
+
+		// [MANDATORY] Append the execution phase:
+		xml.append("\n\t\t").append(getPhase(job, false));
+
+		// [OPTIONAL] Append the RUN ID (name/label of the job set by the user), if any:
+		if (job.getRunId() != null)
+			xml.append("\n\t\t").append(getRunID(job, false));
+
+		// [OPTIONAL] Append the job owner, if any:
+		if (job.getOwner() != null)
+			xml.append("\n\t\t").append(getOwnerID(job, false));
+
+		// [OPTIONAL] Append the creation time:
+		xml.append("\n\t\t").append(getCreationTime(job, false));
+
+		xml.append("\n\t</jobref>");
 
 		return xml.toString();
 	}

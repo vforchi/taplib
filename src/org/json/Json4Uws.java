@@ -160,6 +160,11 @@ public final class Json4Uws {
 					jobsListUrl.setJobId(job.getJobId());
 					json.put("href", jobsListUrl.getRequestURL());
 				}
+				if (job.getRunId() != null)
+					json.put(UWSJob.PARAM_RUN_ID, job.getRunId());
+				if (job.getOwner() != null)
+					json.put(UWSJob.PARAM_OWNER, job.getOwner().getPseudo());
+				json.put(UWSJob.PARAM_CREATION_TIME, ISO8601Format.format(job.getCreationTime()));
 			}else{
 				json.put(UWSJob.PARAM_RUN_ID, job.getRunId());
 				if (job.getOwner() != null)
