@@ -1,20 +1,12 @@
 package adql.parser;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import adql.query.ADQLQuery;
 import adql.query.from.ADQLJoin;
 import adql.query.from.ADQLTable;
 import adql.query.operand.StringConstant;
+import org.junit.*;
+
+import static org.junit.Assert.*;
 
 public class TestADQLParser {
 
@@ -75,7 +67,7 @@ public class TestADQLParser {
 			fail("A SELECT item index is forbidden in GROUP BY! This test should have failed.");
 		}catch(Exception e){
 			assertEquals(ParseException.class, e.getClass());
-			assertEquals(" Encountered \"1\". Was expecting one of: \"\\\"\" <REGULAR_IDENTIFIER> ", e.getMessage());
+			assertEquals(" Encountered \"1\". Was expecting one of: \"\\\"\" <REGULAR_IDENTIFIER_CANDIDATE> ", e.getMessage());
 		}
 
 		try{
@@ -93,7 +85,7 @@ public class TestADQLParser {
 			fail("A column index is forbidden in USING(...)! This test should have failed.");
 		}catch(Exception e){
 			assertEquals(ParseException.class, e.getClass());
-			assertEquals(" Encountered \"1\". Was expecting one of: \"\\\"\" <REGULAR_IDENTIFIER> ", e.getMessage());
+			assertEquals(" Encountered \"1\". Was expecting one of: \"\\\"\" <REGULAR_IDENTIFIER_CANDIDATE> ", e.getMessage());
 		}
 	}
 
