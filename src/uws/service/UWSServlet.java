@@ -16,7 +16,7 @@ package uws.service;
  * You should have received a copy of the GNU Lesser General Public License
  * along with UWSLibrary.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Copyright 2012-2017 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2018 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -57,7 +57,9 @@ import uws.job.parameters.UWSParameters;
 import uws.job.serializer.JSONSerializer;
 import uws.job.serializer.UWSSerializer;
 import uws.job.serializer.XMLSerializer;
+import uws.job.serializer.filter.JobListRefiner;
 import uws.job.user.JobOwner;
+import uws.service.actions.JobSummary;
 import uws.service.actions.UWSAction;
 import uws.service.backup.UWSBackupManager;
 import uws.service.error.DefaultUWSErrorWriter;
@@ -70,6 +72,7 @@ import uws.service.log.UWSLog.LogLevel;
 import uws.service.request.RequestParser;
 import uws.service.request.UWSRequestParser;
 import uws.service.request.UploadFile;
+import uws.service.wait.BlockingPolicy;
 
 /**
  * <p>
@@ -150,7 +153,7 @@ import uws.service.request.UploadFile;
  * </p>
  *
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 4.2 (09/2017)
+ * @version 4.4 (08/2018)
  */
 public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory {
 	private static final long serialVersionUID = 1L;
@@ -162,10 +165,10 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	protected String description = null;
 
 	/** List of all managed jobs lists. <i>(it is a LinkedHashMap so that jobs lists are ordered by insertion)</i> */
-	private Map<String,JobList> mapJobLists;
+	private Map<String, JobList> mapJobLists;
 
 	/** List of available serializers. */
-	private Map<String,UWSSerializer> serializers;
+	private Map<String, UWSSerializer> serializers;
 
 	/** The MIME type of the default serialization format. */
 	protected String defaultSerializer = null;
@@ -180,7 +183,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	protected final ArrayList<String> expectedAdditionalParams = new ArrayList<String>(10);
 
 	/** List the controllers of all the input parameters. See {@link UWSParameters} and {@link InputParamController} for more details. */
-	protected final HashMap<String,InputParamController> inputParamControllers = new HashMap<String,InputParamController>(10);
+	protected final HashMap<String, InputParamController> inputParamControllers = new HashMap<String, InputParamController>(10);
 
 	/** Lets managing all UWS files (i.e. log, result, backup, ...). */
 	private UWSFileManager fileManager = null;
@@ -197,6 +200,17 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 
 	/** Lets writing/formatting any exception/throwable in a HttpServletResponse. */
 	protected ServiceErrorWriter errorWriter;
+
+	/**
+	 * Strategy to use for the blocking/wait process concerning the
+	 * {@link #doJobSummary(UWSUrl, HttpServletRequest, HttpServletResponse, JobOwner)}
+	 * action.
+	 * <p>
+	 * 	If NULL, the standard strategy will be used: wait exactly the time asked
+	 * 	by the user (or indefinitely if none is specified).
+	 * </p>
+	 * @since 4.3 */
+	protected BlockingPolicy waitPolicy = null;
 
 	@Override
 	public final void init(ServletConfig config) throws ServletException{
@@ -233,10 +247,10 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 		}
 
 		// Initialize the list of jobs:
-		mapJobLists = new LinkedHashMap<String,JobList>();
+		mapJobLists = new LinkedHashMap<String, JobList>();
 
 		// Initialize the list of available serializers:
-		serializers = new HashMap<String,UWSSerializer>();
+		serializers = new HashMap<String, UWSSerializer>();
 		addSerializer(new XMLSerializer());
 		addSerializer(new JSONSerializer());
 
@@ -334,13 +348,6 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 		final String reqID = generateRequestID(req);
 		req.setAttribute(UWS.REQ_ATTRIBUTE_ID, reqID);
 
-		// Extract all parameters:
-		try{
-			req.setAttribute(UWS.REQ_ATTRIBUTE_PARAMETERS, requestParser.parse(req));
-		}catch(UWSException ue){
-			logger.log(LogLevel.WARNING, "REQUEST_PARSER", "Can not extract the HTTP request parameters!", ue);
-		}
-
 		// Log the reception of the request:
 		logger.logHttp(LogLevel.INFO, req, reqID, null, null);
 
@@ -360,6 +367,9 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 
 			// Set the character encoding:
 			resp.setCharacterEncoding(UWSToolBox.DEFAULT_CHAR_ENCODING);
+
+			// Extract all parameters:
+			req.setAttribute(UWS.REQ_ATTRIBUTE_PARAMETERS, requestParser.parse(req));
 
 			// METHOD GET:
 			if (method.equals("GET")){
@@ -502,6 +512,52 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 		}
 	}
 
+	/* ***************** */
+	/* BLOCKING BEHAVIOR */
+	/* ***************** */
+
+	/**
+	 * Get the currently used strategy for the blocking behavior of the
+	 * Job Summary action.
+	 *
+	 * <p>
+	 * 	This strategy lets decide how long a WAIT request must block a HTTP
+	 * 	request. With a such policy, the waiting time specified by the user may
+	 * 	be modified.
+	 * </p>
+	 *
+	 * @return	The WAIT strategy,
+	 *        	or NULL if the default one (i.e. wait the time specified by the
+	 *        	user) is used.
+	 *
+	 * @since 4.3
+	 */
+	public final BlockingPolicy getWaitPolicy(){
+		return waitPolicy;
+	}
+
+	/**
+	 * Set the strategy to use for the blocking behavior of the
+	 * Job Summary action.
+	 *
+	 * <p>
+	 * 	This strategy lets decide whether a WAIT request must block a HTTP
+	 * 	request and how long. With a such policy, the waiting time specified by
+	 * 	the user may be modified.
+	 * </p>
+	 *
+	 * @param waitPolicy	The WAIT strategy to use,
+	 *                  	or NULL if the default one (i.e. wait the time
+	 *                  	specified by the user ;
+	 *                  	if no time is specified the HTTP request may be
+	 *                  	blocked indefinitely) must be used.
+	 *
+	 * @since 4.3
+	 */
+	public final void setWaitPolicy(final BlockingPolicy waitPolicy){
+		this.waitPolicy = waitPolicy;
+	}
+
 	/* *********** */
 	/* UWS ACTIONS */
 	/* *********** */
@@ -536,7 +592,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 		resp.setContentType(serializer.getMimeType());
 		resp.setCharacterEncoding(UWSToolBox.DEFAULT_CHAR_ENCODING);
 		try{
-			jobsList.serialize(resp.getOutputStream(), serializer, user);
+			jobsList.serialize(resp.getOutputStream(), serializer, user, new JobListRefiner(req));
 		}catch(Exception e){
 			if (!(e instanceof UWSException)){
 				getLogger().logUWS(LogLevel.ERROR, requestUrl, "SERIALIZE", "Can not serialize the jobs list \"" + jobsList.getName() + "\"!", e);
@@ -602,6 +658,9 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	protected void doJobSummary(UWSUrl requestUrl, HttpServletRequest req, HttpServletResponse resp, JobOwner user) throws UWSException, ServletException, IOException{
 		// Get the job:
 		UWSJob job = getJob(requestUrl);
+
+		// Block if necessary:
+		JobSummary.block(waitPolicy, req, job, user);
 
 		// Write the job summary:
 		UWSSerializer serializer = getSerializer(req.getHeader("Accept"));
@@ -775,12 +834,12 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	}
 
 	@Override
-	public UWSJob createJob(final String jobID, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException{
-		return new UWSJob(jobID, owner, params, quote, startTime, endTime, results, error);
+	public UWSJob createJob(final String jobID, final long creationTime, final JobOwner owner, final UWSParameters params, final long quote, final long startTime, final long endTime, final List<Result> results, final ErrorSummary error) throws UWSException{
+		return new UWSJob(jobID, creationTime, owner, params, quote, startTime, endTime, results, error);
 	}
 
 	@Override
-	public UWSParameters createUWSParameters(final Map<String,Object> params) throws UWSException{
+	public UWSParameters createUWSParameters(final Map<String, Object> params) throws UWSException{
 		return new UWSParameters(params, expectedAdditionalParams, inputParamControllers);
 	}
 
@@ -966,7 +1025,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * Gets the list of all UWS input parameter controllers.
 	 * @return	All parameter controllers.
 	 */
-	public final Map<String,InputParamController> getInputParamControllers(){
+	public final Map<String, InputParamController> getInputParamControllers(){
 		return inputParamControllers;
 	}
 
@@ -974,7 +1033,7 @@ public abstract class UWSServlet extends HttpServlet implements UWS, UWSFactory 
 	 * Gets an iterator on the list of all UWS input parameter controllers.
 	 * @return	An iterator on all parameter controllers.
 	 */
-	public final Iterator<Map.Entry<String,InputParamController>> getInputParamControllersIterator(){
+	public final Iterator<Map.Entry<String, InputParamController>> getInputParamControllersIterator(){
 		return inputParamControllers.entrySet().iterator();
 	}
 

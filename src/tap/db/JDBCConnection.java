@@ -16,7 +16,7 @@ package tap.db;
  * You should have received a copy of the GNU Lesser General Public License
  * along with TAPLibrary.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Copyright 2012-2017 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
+ * Copyright 2012-2018 - UDS/Centre de Données astronomiques de Strasbourg (CDS),
  *                       Astronomisches Rechen Institut (ARI)
  */
 
@@ -181,7 +181,7 @@ import uws.service.log.UWSLog.LogLevel;
  * </i></p>
  *
  * @author Gr&eacute;gory Mantelet (CDS;ARI)
- * @version 2.1 (08/2017)
+ * @version 2.3 (10/2018)
  * @since 2.0
  */
 public class JDBCConnection implements DBConnection {
@@ -198,13 +198,14 @@ public class JDBCConnection implements DBConnection {
 	/** DBMS name of Oracle used in the database URL. */
 	protected final static String DBMS_ORACLE = "oracle";
 
-	/** Name of the database column giving the database name of a TAP column, table or schema. */
+	/** Name of the database column giving the database name of a TAP column,
+	 * table or schema. */
 	protected final static String DB_NAME_COLUMN = "dbname";
 
 	/** Name of the database column giving the coordinate system ID associated
 	 * with a TAP column.
 	 * @since 2.1 */
-	protected final static String COOSYS_ID_COLUMN = "dbname";
+	protected final static String COOSYS_ID_COLUMN = "coosys_id";
 
 	/** Connection ID (typically, the job ID). It lets identify the DB errors linked to the Job execution in the logs. */
 	protected final String ID;
@@ -316,7 +317,7 @@ public class JDBCConnection implements DBConnection {
 	 * 	Keys and values are case sensitive.
 	 * </p>
 	 * @since 2.1 */
-	protected Map<String,String> dbMapping = null;
+	protected Map<String, String> dbMapping = null;
 
 	/**
 	 * <p>Creates a JDBC connection to the specified database and with the specified JDBC driver.
@@ -849,12 +850,12 @@ public class JDBCConnection implements DBConnection {
 	 *
 	 * @since 2.1
 	 */
-	public void setDBMapping(final Map<String,String> mapping){
+	public void setDBMapping(final Map<String, String> mapping){
 		if (mapping == null)
 			dbMapping = null;
 		else{
 			if (dbMapping == null)
-				dbMapping = new HashMap<String,String>(mapping.size());
+				dbMapping = new HashMap<String, String>(mapping.size());
 			else
 				dbMapping.clear();
 			dbMapping.putAll(mapping);
@@ -947,7 +948,7 @@ public class JDBCConnection implements DBConnection {
 			List<TAPTable> lstTables = loadTables(tap_schema.getTable(STDTable.TABLES.label), metadata, stmt);
 
 			// load all coordinate systems from TAP_SCHEMA.coosys: [non standard]
-			Map<String,TAPCoosys> mapCoosys = null;
+			Map<String, TAPCoosys> mapCoosys = null;
 			if (isTableExisting(tap_schema.getDBName(), "coosys", stmt.getConnection().getMetaData())){
 				if (logger != null)
 					logger.logDB(LogLevel.INFO, this, "LOAD_TAP_SCHEMA", "Loading TAP_SCHEMA.coosys.", null);
@@ -1040,6 +1041,10 @@ public class JDBCConnection implements DBConnection {
 				if (dbName != null && dbName.trim().length() > 0)
 					newSchema.setDBName(dbName);
 				newSchema.setIndex(schemaIndex);
+
+				// force the dbName of TAP_SCHEMA to be the same as the used one:
+				if (STDSchema.TAPSCHEMA.label.equalsIgnoreCase(schemaName))
+					newSchema.setDBName(tableDef.getDBSchemaName());
 
 				// add the new schema inside the given metadata:
 				metadata.addSchema(newSchema);
@@ -1145,13 +1150,21 @@ public class JDBCConnection implements DBConnection {
 				if (typeStr != null){
 					try{
 						type = TableType.valueOf(typeStr.toLowerCase());
-					}catch(IllegalArgumentException iae){}
+					}catch(IllegalArgumentException iae){
+					}
 				}
 
 				// create the new table:
 				TAPTable newTable = new TAPTable(tableName, type, nullifyIfNeeded(description), nullifyIfNeeded(utype));
 				newTable.setDBName(dbName);
 				newTable.setIndex(tableIndex);
+
+				// force the dbName of TAP_SCHEMA table to be the same as the used one:
+				if (STDSchema.TAPSCHEMA.label.equalsIgnoreCase(schemaName)){
+					String simpleTableName = (endPrefix > 0) ? tableName.substring(endPrefix + 1) : tableName;
+					if (tableDef.getSchema() != null && tableDef.getSchema().getTable(simpleTableName) != null)
+						newTable.setDBName(tableDef.getSchema().getTable(simpleTableName).getDBName());
+				}
 
 				// add the new table inside its corresponding schema:
 				schema.addTable(newTable);
@@ -1170,19 +1183,19 @@ public class JDBCConnection implements DBConnection {
 
 	/**
 	 * Load all coordinate systems declared in the TAP_SCHEMA.
-	 * 
+	 *
 	 * @param tableDef		Definition of the table TAP_SCHEMA.coosys.
 	 * @param metadata		Metadata in which the found coordinate systems will be inserted (see {@link TAPMetadata#addCoosys(TAPCoosys)}).
 	 * @param stmt			Statement to use in order to interact with the database.
-	 * 
+	 *
 	 * @return	A map containing all declared coordinate systems (key=coosys ID, value={@link TAPCoosys}).
 	 *        	<i>note: this map is required by {@link #loadColumns(TAPTable, List, Map, Statement)}.</i>
-	 * 
+	 *
 	 * @throws DBException	If any error occurs while interacting with the database.
-	 * 
+	 *
 	 * @since 2.1
 	 */
-	protected Map<String,TAPCoosys> loadCoosys(final TAPTable tableDef, final TAPMetadata metadata, final Statement stmt) throws DBException{
+	protected Map<String, TAPCoosys> loadCoosys(final TAPTable tableDef, final TAPMetadata metadata, final Statement stmt) throws DBException{
 		ResultSet rs = null;
 		try{
 			// Build the SQL query:
@@ -1198,7 +1211,7 @@ public class JDBCConnection implements DBConnection {
 			rs = stmt.executeQuery(sqlBuf.toString());
 
 			// Create all coosys:
-			HashMap<String,TAPCoosys> mapCoosys = new HashMap<String,TAPCoosys>();
+			HashMap<String, TAPCoosys> mapCoosys = new HashMap<String, TAPCoosys>();
 			while(rs.next()){
 				String coosysId = rs.getString(1), system = rs.getString(2),
 						equinox = rs.getString(3), epoch = rs.getString(4);
@@ -1239,7 +1252,7 @@ public class JDBCConnection implements DBConnection {
 	 * @param stmt			Statement to use in order to interact with the database.
 	 *
 	 * @throws DBException	If a table can not be found, or if any other error occurs while interacting with the database.
-	 * 
+	 *
 	 * @deprecated	This method is now replaced by {@link #loadColumns(TAPTable, List, Map, Statement)} which has an additional parameter:
 	 *            	the list of declared coordinate systems.
 	 */
@@ -1250,27 +1263,27 @@ public class JDBCConnection implements DBConnection {
 
 	/**
 	 * <p>Load into the corresponding tables all columns listed in TAP_SCHEMA.columns.</p>
-	 * 
+	 *
 	 * <p><i>Note:
 	 * 	Tables are searched in the given list by their ADQL name and case sensitively.
 	 * 	If they can not be found a {@link DBException} is thrown.
 	 * </i></p>
-	 * 
+	 *
 	 * <p><i>Note 2:
 	 * 	If the column column_index exists, column entries are retrieved ordered by ascending table_name, then column_index, and finally column_name.
 	 * 	If this column does not exist, column entries are retrieved ordered by ascending table_name and then column_name.
 	 * </i></p>
-	 * 
+	 *
 	 * @param tableDef		Definition of the table TAP_SCHEMA.columns.
 	 * @param lstTables		List of all published tables (= all tables listed in TAP_SCHEMA.tables).
 	 * @param mapCoosys		List of all published coordinate systems (= all coordinates systems listed in TAP_SCHEMA.coosys).
 	 * @param stmt			Statement to use in order to interact with the database.
-	 * 
+	 *
 	 * @throws DBException	If a table can not be found, or if any other error occurs while interacting with the database.
-	 * 
+	 *
 	 * @since 2.1
 	 */
-	protected void loadColumns(final TAPTable tableDef, final List<TAPTable> lstTables, final Map<String,TAPCoosys> mapCoosys, final Statement stmt) throws DBException{
+	protected void loadColumns(final TAPTable tableDef, final List<TAPTable> lstTables, final Map<String, TAPCoosys> mapCoosys, final Statement stmt) throws DBException{
 		ResultSet rs = null;
 		try{
 			// Determine whether the dbName column exists:
@@ -1348,7 +1361,8 @@ public class JDBCConnection implements DBConnection {
 				if (datatype != null){
 					try{
 						tapDatatype = DBDatatype.valueOf(datatype.toUpperCase());
-					}catch(IllegalArgumentException iae){}
+					}catch(IllegalArgumentException iae){
+					}
 				}
 				// ...build the column type:
 				DBType type;
@@ -1379,6 +1393,10 @@ public class JDBCConnection implements DBConnection {
 							logger.logDB(LogLevel.WARNING, this, "LOAD_TAP_SCHEMA", "No coordinate system for the column \"" + columnName + "\"! Cause: unknown coordinate system: \"" + coosysId + "\".", null);
 					}
 				}
+
+				// force the dbName of TAP_SCHEMA column to be the same as the used one:
+				if (STDSchema.TAPSCHEMA.label.equalsIgnoreCase(table.getADQLSchemaName()) && tableDef.getSchema() != null && tableDef.getSchema().getTable(table.getADQLName()) != null && tableDef.getSchema().getTable(table.getADQLName()).getColumn(columnName) != null)
+					newColumn.setDBName(tableDef.getSchema().getTable(table.getADQLName()).getColumn(columnName).getDBName());
 
 				// add the new column inside its corresponding table:
 				table.addColumn(newColumn);
@@ -1459,7 +1477,7 @@ public class JDBCConnection implements DBConnection {
 				}
 
 				// get the list of columns joining the two tables of the foreign key:
-				HashMap<String,String> columns = new HashMap<String,String>();
+				HashMap<String, String> columns = new HashMap<String, String>();
 				ResultSet rsKeyCols = null;
 				try{
 					keyColumnsStmt.setString(1, key_id);
@@ -1651,7 +1669,7 @@ public class JDBCConnection implements DBConnection {
 		}
 
 		// 4. Finally, build the join between the standard tables and the custom ones:
-		TAPTable[] stdTables = new TAPTable[]{TAPMetadata.getStdTable(STDTable.SCHEMAS),TAPMetadata.getStdTable(STDTable.TABLES),TAPMetadata.getStdTable(STDTable.COLUMNS),TAPMetadata.getStdTable(STDTable.KEYS),TAPMetadata.getStdTable(STDTable.KEY_COLUMNS)};
+		TAPTable[] stdTables = new TAPTable[]{ TAPMetadata.getStdTable(STDTable.SCHEMAS), TAPMetadata.getStdTable(STDTable.TABLES), TAPMetadata.getStdTable(STDTable.COLUMNS), TAPMetadata.getStdTable(STDTable.KEYS), TAPMetadata.getStdTable(STDTable.KEY_COLUMNS) };
 		for(int i = 0; i < stdTables.length; i++){
 
 			// CASE: no custom definition:
@@ -1720,7 +1738,7 @@ public class JDBCConnection implements DBConnection {
 	 * @see JDBCTranslator#isCaseSensitive(IdentifierField)
 	 */
 	private void dropTAPSchemaTables(final TAPTable[] stdTables, final Statement stmt, final DatabaseMetaData dbMeta) throws SQLException{
-		String[] stdTablesToDrop = new String[]{null,null,null,null,null};
+		String[] stdTablesToDrop = new String[]{ null, null, null, null, null };
 
 		ResultSet rs = null;
 		try{
@@ -2250,10 +2268,10 @@ public class JDBCConnection implements DBConnection {
 					executeUpdate(stmtKeys, nbKeys);
 
 				// add the key columns into KEY_COLUMNS:
-				Iterator<Map.Entry<String,String>> itAssoc = key.iterator();
+				Iterator<Map.Entry<String, String>> itAssoc = key.iterator();
 				while(itAssoc.hasNext()){
 					nbKeyColumns++;
-					Map.Entry<String,String> assoc = itAssoc.next();
+					Map.Entry<String, String> assoc = itAssoc.next();
 					stmtKeyCols.setString(1, key.getKeyId());
 					stmtKeyCols.setString(2, assoc.getKey());
 					stmtKeyCols.setString(3, assoc.getValue());
@@ -3091,6 +3109,95 @@ public class JDBCConnection implements DBConnection {
 	}
 
 	/**
+	 * Get the index of the column returning the schema name in the ResultSet
+	 * returned by {@link DatabaseMetaData#getTables(String, String, String, String[])}.
+	 *
+	 * <p>
+	 * 	The index returned by this function may be different from one DBMS from
+	 * 	another depending on how it deals with schemas. For instance, in MySQL
+	 * 	database, schemas are interpreted as catalogs (so the index would be 2
+	 * 	instead of 1).
+	 * </p>
+	 *
+	 * @return	Index of the column providing the table's schema name.
+	 *
+	 * @since 2.1
+	 */
+	protected int getTableSchemaIndexInMetadata(){
+		return dbms.equalsIgnoreCase(DBMS_MYSQL) ? 1 : 2;
+	}
+
+	/**
+	 * Get all schemas available in the database.
+	 *
+	 * @param dbMeta	Metadata of the database to investigate.
+	 *
+	 * @return	Metadata about all available schemas.
+	 *
+	 * @throws SQLException	If any error occurs while querying the database
+	 *                     	metadata.
+	 *
+	 * @since 2.1
+	 */
+	protected ResultSet getDBMetaSchemas(final DatabaseMetaData dbMeta) throws SQLException{
+		return (dbms.equalsIgnoreCase(DBMS_MYSQL) ? dbMeta.getCatalogs() : dbMeta.getSchemas());
+	}
+
+	/**
+	 * Get all tables matching the given table name pattern and being inside
+	 * the specified schema(s).
+	 *
+	 * @param dbMeta		Metadata of the database to investigate.
+	 * @param schemaPattern	Pattern matching the schema(s) name containing the
+	 *                     	target tables.
+	 *                     	<i>If NULL, the table will be searched in all
+	 *                     	schemas.</i>
+	 * @param tablePattern	Pattern matching the name of the tables to list.
+	 *
+	 * @return	Metadata about all matching tables.
+	 *
+	 * @throws SQLException	If any error occurs while querying the database
+	 *                     	metadata.
+	 *
+	 * @since 2.1
+	 */
+	protected ResultSet getDBMetaTables(final DatabaseMetaData dbMeta, final String schemaPattern, final String tablePattern) throws SQLException{
+		if (dbms.equalsIgnoreCase(DBMS_MYSQL))
+			return dbMeta.getTables(schemaPattern, null, tablePattern, null);
+		else
+			return dbMeta.getTables(null, schemaPattern, tablePattern, null);
+	}
+
+	/**
+	 * Get all columns matching the given column name pattern and being inside
+	 * the specified table(s) and schema(s).
+	 *
+	 * @param dbMeta		Metadata of the database to investigate.
+	 * @param schemaPattern	Pattern matching the schema(s) name containing the
+	 *                     	target columns.
+	 *                     	<i>If NULL, the columns will be searched in all
+	 *                     	schemas.</i>
+	 * @param tablePattern	Pattern matching the table(s) name containing the
+	 *                     	target columns.
+	 *                     	<i>If NULL, the columns will be searched in all
+	 *                     	tables.</i>
+	 * @param columnPattern	Pattern matching the name of the columns to list.
+	 *
+	 * @return	Metadata about all matching columns.
+	 *
+	 * @throws SQLException	If any error occurs while querying the database
+	 *                     	metadata.
+	 *
+	 * @since 2.1
+	 */
+	protected ResultSet getDBMetaColumns(final DatabaseMetaData dbMeta, final String schemaPattern, final String tablePattern, final String columnPattern) throws SQLException{
+		if (dbms.equalsIgnoreCase(DBMS_MYSQL))
+			return dbMeta.getColumns(schemaPattern, null, tablePattern, columnPattern);
+		else
+			return dbMeta.getColumns(null, schemaPattern, tablePattern, columnPattern);
+	}
+
+	/**
 	 * <p>Tell whether the specified schema exists in the database.
 	 * 	To do so, it is using the given {@link DatabaseMetaData} object to query the database and list all existing schemas.</p>
 	 *
@@ -3115,7 +3222,7 @@ public class JDBCConnection implements DBConnection {
 	 * @throws SQLException	If any error occurs while interrogating the database about existing schema.
 	 */
 	protected boolean isSchemaExisting(String schemaName, final DatabaseMetaData dbMeta) throws SQLException{
-		if (DBMS_MYSQL.equals(dbms) || !supportsSchema || schemaName == null || schemaName.length() == 0)
+		if (!supportsSchema || schemaName == null || schemaName.length() == 0)
 			return true;
 
 		// Determine the case sensitivity to use for the equality test:
@@ -3124,7 +3231,7 @@ public class JDBCConnection implements DBConnection {
 		ResultSet rs = null;
 		try{
 			// List all schemas available and stop when a schema name matches ignoring the case:
-			rs = dbMeta.getSchemas();
+			rs = getDBMetaSchemas(dbMeta);
 			boolean hasSchema = false;
 			while(!hasSchema && rs.next()){
 				hasSchema = equals(rs.getString(1), schemaName, caseSensitive);
@@ -3177,16 +3284,16 @@ public class JDBCConnection implements DBConnection {
 			if (supportsSchema){
 				String schemaPattern = schemaCaseSensitive ? schemaName : null;
 				String tablePattern = tableCaseSensitive ? tableName : null;
-				rs = dbMeta.getTables(null, schemaPattern, tablePattern, null);
+				rs = getDBMetaTables(dbMeta, schemaPattern, tablePattern);
 			}else{
 				String tablePattern = tableCaseSensitive ? tableName : null;
-				rs = dbMeta.getTables(null, null, tablePattern, null);
+				rs = getDBMetaTables(dbMeta, null, tablePattern);
 			}
 
 			// Stop on the first table which match completely (schema name + table name in function of their respective case sensitivity):
 			int cnt = 0;
 			while(rs.next()){
-				String rsSchema = nullifyIfNeeded(rs.getString(2));
+				String rsSchema = nullifyIfNeeded(rs.getString(getTableSchemaIndexInMetadata()));
 				String rsTable = rs.getString(3);
 				if (!supportsSchema || schemaName == null || equals(rsSchema, schemaName, schemaCaseSensitive)){
 					if (equals(rsTable, tableName, tableCaseSensitive))
@@ -3261,24 +3368,24 @@ public class JDBCConnection implements DBConnection {
 			if (supportsSchema){
 				String schemaPattern = schemaCaseSensitive ? schemaName : null;
 				String tablePattern = tableCaseSensitive ? tableName : null;
-				rsT = dbMeta.getTables(null, schemaPattern, tablePattern, null);
+				rsT = getDBMetaTables(dbMeta, schemaPattern, tablePattern);
 			}else{
 				String tablePattern = tableCaseSensitive ? tableName : null;
-				rsT = dbMeta.getTables(null, null, tablePattern, null);
+				rsT = getDBMetaTables(dbMeta, null, tablePattern);
 			}
 
 			// For each matching table:
 			int cnt = 0;
 			String columnPattern = columnCaseSensitive ? columnName : null;
 			while(rsT.next()){
-				String rsSchema = nullifyIfNeeded(rsT.getString(2));
+				String rsSchema = nullifyIfNeeded(rsT.getString(getTableSchemaIndexInMetadata()));
 				String rsTable = rsT.getString(3);
 				// test the schema name:
 				if (!supportsSchema || schemaName == null || equals(rsSchema, schemaName, schemaCaseSensitive)){
 					// test the table name:
 					if ((tableName == null || equals(rsTable, tableName, tableCaseSensitive))){
 						// list its columns:
-						rsC = dbMeta.getColumns(null, rsSchema, rsTable, columnPattern);
+						rsC = getDBMetaColumns(dbMeta, rsSchema, rsTable, columnPattern);
 						// count all matching columns:
 						while(rsC.next()){
 							String rsColumn = rsC.getString(4);
@@ -3498,7 +3605,7 @@ public class JDBCConnection implements DBConnection {
 	 * @param lst	List to update.
 	 * @param it	All items to append inside the list.
 	 */
-	private < T > void appendAllInto(final List<T> lst, final Iterator<T> it){
+	private <T> void appendAllInto(final List<T> lst, final Iterator<T> it){
 		while(it.hasNext())
 			lst.add(it.next());
 	}

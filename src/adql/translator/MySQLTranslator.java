@@ -5,6 +5,8 @@ import adql.db.DBType.DBDatatype;
 import adql.db.STCS.Region;
 import adql.parser.ParseException;
 import adql.query.IdentifierField;
+import adql.query.operand.ADQLOperand;
+import adql.query.operand.Concatenation;
 import adql.query.operand.function.geometry.AreaFunction;
 import adql.query.operand.function.geometry.BoxFunction;
 import adql.query.operand.function.geometry.CentroidFunction;
@@ -34,20 +36,23 @@ import adql.query.operand.function.geometry.RegionFunction;
  * You should have received a copy of the GNU Lesser General Public License
  * along with ADQLLibrary.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Copyright 2017 - Astronomisches Rechen Institut (ARI)
+ * Copyright 2017-2019 - Astronomisches Rechen Institut (ARI),
+ *                       UDS/Centre de Données astronomiques de Strasbourg (CDS)
  */
 
 /**
- * <p>Translates all ADQL objects into an SQL interrogation query designed for MySQL.</p>
+ * Translates all ADQL objects into an SQL interrogation query designed for
+ * MySQL.
  *
  * <p><i><b>Important</b>:
  * 	The geometrical functions are translated exactly as in ADQL.
- * 	You will probably need to extend this translator to correctly manage the geometrical functions.
+ * 	You will probably need to extend this translator to correctly manage the
+ * 	geometrical functions.
  * </i></p>
  *
- * @author Gr&eacute;gory Mantelet (ARI)
- * @version 2.1 (08/2017)
- * @since 2.1
+ * @author Gr&eacute;gory Mantelet (ARI;CDS)
+ * @version 1.5 (03/2019)
+ * @since 1.4
  */
 public class MySQLTranslator extends JDBCTranslator {
 
@@ -77,6 +82,21 @@ public class MySQLTranslator extends JDBCTranslator {
 	}
 
 	/**
+	 * Build a MySQLTranslator which always translates in SQL all identifiers
+	 * (schema, table and column) in the specified case sensitivity ; in other
+	 * words, schema, table and column names will all be surrounded or not by
+	 * back-quotes in the SQL translation.
+	 *
+	 * @param allCaseSensitive	<i>true</i> to translate all identifiers in a
+	 *                        	case sensitive manner
+	 *                        	(surrounded by back-quotes),
+	 *                        	<i>false</i> for case insensitivity.
+	 */
+	public MySQLTranslator(final boolean allCaseSensitive){
+		caseSensitivity = allCaseSensitive ? (byte)0x0F : (byte)0x00;
+	}
+
+	/**
 	 * Build a MySQLTranslator which will always translate in SQL identifiers
 	 * with the defined case sensitivity.
 	 *
@@ -88,21 +108,6 @@ public class MySQLTranslator extends JDBCTranslator {
 	 *             		(case sensitive in the DBMS), <i>false</i> otherwise.
 	 * @param column	<i>true</i> to translate column names with back-quotes
 	 *              	(case sensitive in the DBMS), <i>false</i> otherwise.
-	 */
-	public MySQLTranslator(final boolean allCaseSensitive){
-		caseSensitivity = allCaseSensitive ? (byte)0x0F : (byte)0x00;
-	}
-
-	/**
-	 * Build a MySQLTranslator which always translates in SQL all identifiers
-	 * (schema, table and column) in the specified case sensitivity ; in other
-	 * words, schema, table and column names will all be surrounded or not by
-	 * back-quotes in the SQL translation.
-	 *
-	 * @param allCaseSensitive	<i>true</i> to translate all identifiers in a
-	 *                        	case sensitive manner
-	 *                        	(surrounded by back-quotes),
-	 *                        	<i>false</i> for case insensitivity.
 	 */
 	public MySQLTranslator(final boolean catalog, final boolean schema, final boolean table, final boolean column){
 		caseSensitivity = IdentifierField.CATALOG.setCaseSensitive(caseSensitivity, catalog);
@@ -127,6 +132,28 @@ public class MySQLTranslator extends JDBCTranslator {
 
 	/* ********************************************************************** */
 	/* *                                                                    * */
+	/* * GENERAL TRANSLATIONS                                               * */
+	/* *                                                                    * */
+	/* ********************************************************************** */
+
+	@Override
+	public String translate(Concatenation concat) throws TranslationException{
+		StringBuffer translated = new StringBuffer();
+
+		for(ADQLOperand op : concat){
+			if (translated.length() == 0)
+				translated.append("CONCAT(");
+			else
+				translated.append(", ");
+			translated.append(translate(op));
+		}
+		translated.append(")");
+
+		return translated.toString();
+	}
+
+	/* ********************************************************************** */
+	/* *                                                                    * */
 	/* * TYPE MANAGEMENT                                                    * */
 	/* *                                                                    * */
 	/* ********************************************************************** */
@@ -145,7 +172,8 @@ public class MySQLTranslator extends JDBCTranslator {
 		if (params != null && params.length > 0){
 			try{
 				lengthParam = Integer.parseInt(params[0]);
-			}catch(NumberFormatException nfe){}
+			}catch(NumberFormatException nfe){
+			}
 		}
 
 		// SMALLINT

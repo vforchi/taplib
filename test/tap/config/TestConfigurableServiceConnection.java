@@ -13,12 +13,14 @@ import static tap.config.TAPConfiguration.DEFAULT_SYNC_FETCH_SIZE;
 import static tap.config.TAPConfiguration.KEY_ASYNC_FETCH_SIZE;
 import static tap.config.TAPConfiguration.KEY_COORD_SYS;
 import static tap.config.TAPConfiguration.KEY_DEFAULT_OUTPUT_LIMIT;
+import static tap.config.TAPConfiguration.KEY_DEFAULT_UPLOAD_LIMIT;
 import static tap.config.TAPConfiguration.KEY_FILE_MANAGER;
 import static tap.config.TAPConfiguration.KEY_GEOMETRIES;
 import static tap.config.TAPConfiguration.KEY_LOGGER;
 import static tap.config.TAPConfiguration.KEY_LOG_ROTATION;
 import static tap.config.TAPConfiguration.KEY_MAX_ASYNC_JOBS;
 import static tap.config.TAPConfiguration.KEY_MAX_OUTPUT_LIMIT;
+import static tap.config.TAPConfiguration.KEY_MAX_UPLOAD_LIMIT;
 import static tap.config.TAPConfiguration.KEY_METADATA;
 import static tap.config.TAPConfiguration.KEY_METADATA_FILE;
 import static tap.config.TAPConfiguration.KEY_MIN_LOG_LEVEL;
@@ -101,17 +103,20 @@ public class TestConfigurableServiceConnection {
 			badVotFormat6Prop, unknownFormatProp, maxAsyncProp,
 			negativeMaxAsyncProp, notIntMaxAsyncProp, defaultOutputLimitProp,
 			maxOutputLimitProp, bothOutputLimitGoodProp, bothOutputLimitBadProp,
-			syncFetchSizeProp, notIntSyncFetchSizeProp,
+			defaultUploadLimitProp, maxUploadLimitProp, bothUploadLimitGoodProp,
+			bothUploadLimitBadProp, syncFetchSizeProp, notIntSyncFetchSizeProp,
 			negativeSyncFetchSizeProp, notIntAsyncFetchSizeProp,
 			negativeAsyncFetchSizeProp, asyncFetchSizeProp, userIdentProp,
 			notClassPathUserIdentProp, coordSysProp, noneCoordSysProp,
 			anyCoordSysProp, noneInsideCoordSysProp, unknownCoordSysProp,
 			geometriesProp, noneGeomProp, anyGeomProp, noneInsideGeomProp,
 			unknownGeomProp, anyUdfsProp, noneUdfsProp, udfsProp,
-			udfsWithClassNameProp, udfsListWithNONEorANYProp,
-			udfsWithWrongParamLengthProp, udfsWithMissingBracketsProp,
-			udfsWithMissingDefProp1, udfsWithMissingDefProp2, emptyUdfItemProp1,
-			emptyUdfItemProp2, udfWithMissingEndBracketProp, customFactoryProp,
+			udfsWithClassNameProp, udfsWithClassNameAndDescriptionProp,
+			udfsWithEmptyOptParamsProp, udfsListWithNONEorANYProp,
+			udfsWithWrongDescriptionFormatProp, udfsWithWrongParamLengthProp,
+			udfsWithMissingBracketsProp, udfsWithMissingDefProp1,
+			udfsWithMissingDefProp2, emptyUdfItemProp1, emptyUdfItemProp2,
+			udfWithMissingEndBracketProp, customFactoryProp,
 			customConfigurableFactoryProp, badCustomFactoryProp;
 
 	@BeforeClass
@@ -239,6 +244,20 @@ public class TestConfigurableServiceConnection {
 		bothOutputLimitBadProp.setProperty(KEY_DEFAULT_OUTPUT_LIMIT, "1000");
 		bothOutputLimitBadProp.setProperty(KEY_MAX_OUTPUT_LIMIT, "100");
 
+		defaultUploadLimitProp = (Properties)validProp.clone();
+		defaultUploadLimitProp.setProperty(KEY_DEFAULT_UPLOAD_LIMIT, "100r");
+
+		maxUploadLimitProp = (Properties)validProp.clone();
+		maxUploadLimitProp.setProperty(KEY_MAX_UPLOAD_LIMIT, "1000R");
+
+		bothUploadLimitGoodProp = (Properties)validProp.clone();
+		bothUploadLimitGoodProp.setProperty(KEY_DEFAULT_UPLOAD_LIMIT, "100R");
+		bothUploadLimitGoodProp.setProperty(KEY_MAX_UPLOAD_LIMIT, "10kB");
+
+		bothUploadLimitBadProp = (Properties)validProp.clone();
+		bothUploadLimitBadProp.setProperty(KEY_DEFAULT_UPLOAD_LIMIT, "1000r");
+		bothUploadLimitBadProp.setProperty(KEY_MAX_UPLOAD_LIMIT, "100R");
+
 		syncFetchSizeProp = (Properties)validProp.clone();
 		syncFetchSizeProp.setProperty(KEY_SYNC_FETCH_SIZE, "50");
 
@@ -305,11 +324,20 @@ public class TestConfigurableServiceConnection {
 		udfsWithClassNameProp = (Properties)validProp.clone();
 		udfsWithClassNameProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}]");
 
+		udfsWithClassNameAndDescriptionProp = (Properties)validProp.clone();
+		udfsWithClassNameAndDescriptionProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}, \"Bla \\\"bla\\\".\"], [ titi(b REAL) -> double, {adql.db.TestDBChecker$UDFToto}, \"Function titi.\"]");
+
+		udfsWithEmptyOptParamsProp = (Properties)validProp.clone();
+		udfsWithEmptyOptParamsProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR,,  	 ]");
+
 		udfsListWithNONEorANYProp = (Properties)validProp.clone();
 		udfsListWithNONEorANYProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR],ANY");
 
+		udfsWithWrongDescriptionFormatProp = (Properties)validProp.clone();
+		udfsWithWrongDescriptionFormatProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}, Blabla]");
+
 		udfsWithWrongParamLengthProp = (Properties)validProp.clone();
-		udfsWithWrongParamLengthProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}, foo]");
+		udfsWithWrongParamLengthProp.setProperty(KEY_UDFS, "[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}, \"Blabla\", foo]");
 
 		udfsWithMissingBracketsProp = (Properties)validProp.clone();
 		udfsWithMissingBracketsProp.setProperty(KEY_UDFS, "toto(a string)->VARCHAR");
@@ -348,18 +376,18 @@ public class TestConfigurableServiceConnection {
 	 * CONSTRUCTOR TESTS
 	 *  * In general:
 	 * 		- A valid configuration file builds successfully a fully functional ServiceConnection object.
-	 * 
+	 *
 	 * 	* Over the file manager:
 	 * 		- If no TAPFileManager is provided, an exception must be thrown.
 	 * 		- If a class name toward a valid TAPFileManager is provided, a functional DefaultServiceConnection must be successfully built.
 	 * 		- An incorrect file manager value in the configuration file must generate an exception.
-	 * 
+	 *
 	 *  * Over the output format:
 	 *  	- If a SV format is badly expressed (test with "sv" and "sv()"), an exception must be thrown.
 	 *  	- If an unknown output format is provided an exception must be thrown.
-	 * 
+	 *
 	 * Note: the good configuration of the TAPFactory built by the DefaultServiceConnection is tested in {@link TestConfigurableTAPFactory}.
-	 * 
+	 *
 	 * @see ConfigurableServiceConnection#DefaultServiceConnection(Properties)
 	 */
 	@Test
@@ -832,6 +860,62 @@ public class TestConfigurableServiceConnection {
 			fail("This MUST have succeeded because the default output limit is set automatically to the maximum one if bigger! \nCaught exception: " + getPertinentMessage(e));
 		}
 
+		// Test with no upload limit specified:
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(validProp);
+			assertEquals(1000000, connection.getUploadLimit()[1]);
+			assertEquals(connection.getUploadLimit()[1], connection.getUploadLimit()[0]);
+			assertEquals(LimitUnit.rows, connection.getUploadLimitType()[1]);
+			assertEquals(connection.getUploadLimitType()[1], connection.getUploadLimitType()[0]);
+		}catch(Exception e){
+			fail("This MUST have succeeded because providing no upload limit is valid! \nCaught exception: " + getPertinentMessage(e));
+		}
+
+		// Test with only a set default upload limit:
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(defaultUploadLimitProp);
+			assertEquals(100, connection.getUploadLimit()[1]);
+			assertEquals(connection.getUploadLimit()[1], connection.getUploadLimit()[0]);
+			assertEquals(LimitUnit.rows, connection.getUploadLimitType()[1]);
+			assertEquals(connection.getUploadLimitType()[1], connection.getUploadLimitType()[0]);
+		}catch(Exception e){
+			fail("This MUST have succeeded because setting the default upload limit is valid! \nCaught exception: " + getPertinentMessage(e));
+		}
+
+		// Test with only a set maximum upload limit:
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(maxUploadLimitProp);
+			assertEquals(1000, connection.getUploadLimit()[1]);
+			assertEquals(connection.getUploadLimit()[1], connection.getUploadLimit()[0]);
+			assertEquals(LimitUnit.rows, connection.getUploadLimitType()[1]);
+			assertEquals(connection.getUploadLimitType()[1], connection.getUploadLimitType()[0]);
+		}catch(Exception e){
+			fail("This MUST have succeeded because setting only the maximum upload limit is valid! \nCaught exception: " + getPertinentMessage(e));
+		}
+
+		// Test with both a default and a maximum upload limits where default <= max:
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(bothUploadLimitGoodProp);
+			assertEquals(10, connection.getUploadLimit()[1]);
+			assertEquals(connection.getUploadLimit()[1], connection.getUploadLimit()[0]);
+			assertEquals(LimitUnit.kilobytes, connection.getUploadLimitType()[1]);
+			assertEquals(connection.getUploadLimitType()[1], connection.getUploadLimitType()[0]);
+		}catch(Exception e){
+			fail("This MUST have succeeded because the default upload limit is less or equal the maximum one! \nCaught exception: " + getPertinentMessage(e));
+		}
+
+		// Test with both a default and a maximum output limits BUT where default > max:
+		/* In a such case, the default value is set silently to the maximum one. */
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(bothUploadLimitBadProp);
+			assertEquals(100, connection.getUploadLimit()[1]);
+			assertEquals(connection.getUploadLimit()[1], connection.getUploadLimit()[0]);
+			assertEquals(LimitUnit.rows, connection.getUploadLimitType()[1]);
+			assertEquals(connection.getUploadLimitType()[1], connection.getUploadLimitType()[0]);
+		}catch(Exception e){
+			fail("This MUST have succeeded because the default upload limit is set automatically to the maximum one if bigger! \nCaught exception: " + getPertinentMessage(e));
+		}
+
 		// Test with a not integer sync. fetch size:
 		try{
 			new ConfigurableServiceConnection(notIntSyncFetchSizeProp);
@@ -1040,6 +1124,39 @@ public class TestConfigurableServiceConnection {
 			FunctionDef def = connection.getUDFs().iterator().next();
 			assertEquals("toto(a VARCHAR) -> VARCHAR", def.toString());
 			assertEquals(UDFToto.class, def.getUDFClass());
+			assertNull(def.description);
+		}catch(Exception e){
+			fail("This MUST have succeeded because the given list of UDFs contains valid items! \nCaught exception: " + getPertinentMessage(e));
+		}
+
+		// Valid list of UDFs containing one UDF with a class name AND a description:
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(udfsWithClassNameAndDescriptionProp);
+			assertNotNull(connection.getUDFs());
+			assertEquals(2, connection.getUDFs().size());
+			Iterator<FunctionDef> itUdfs = connection.getUDFs().iterator();
+			FunctionDef def = itUdfs.next();
+			assertEquals("toto(a VARCHAR) -> VARCHAR", def.toString());
+			assertEquals(UDFToto.class, def.getUDFClass());
+			assertEquals("Bla \\\"bla\\\".", def.description);
+			def = itUdfs.next();
+			assertEquals("titi(b REAL) -> DOUBLE", def.toString());
+			assertEquals(UDFToto.class, def.getUDFClass());
+			assertEquals("Function titi.", def.description);
+		}catch(Exception e){
+			e.printStackTrace();
+			fail("This MUST have succeeded because the given list of UDFs contains valid items! \nCaught exception: " + getPertinentMessage(e));
+		}
+
+		// Valid list of UDFs containing one UDF with empty optional parameters:
+		try{
+			ServiceConnection connection = new ConfigurableServiceConnection(udfsWithEmptyOptParamsProp);
+			assertNotNull(connection.getUDFs());
+			assertEquals(1, connection.getUDFs().size());
+			FunctionDef def = connection.getUDFs().iterator().next();
+			assertEquals("toto(a VARCHAR) -> VARCHAR", def.toString());
+			assertNull(def.getUDFClass());
+			assertNull(def.description);
 		}catch(Exception e){
 			fail("This MUST have succeeded because the given list of UDFs contains valid items! \nCaught exception: " + getPertinentMessage(e));
 		}
@@ -1050,7 +1167,7 @@ public class TestConfigurableServiceConnection {
 			fail("This MUST have failed because the given UDFs list contains at least 2 items, whose one is ANY!");
 		}catch(Exception e){
 			assertEquals(TAPException.class, e.getClass());
-			assertEquals("Wrong UDF declaration syntax: unexpected character at position 27 in the property " + KEY_UDFS + ": \"A\"! A UDF declaration must have one of the following syntaxes: \"[signature]\" or \"[signature,{className}]\".", e.getMessage());
+			assertEquals("Wrong UDF declaration syntax: \"ANY\"! (position in the property " + KEY_UDFS + ": 27-30)", e.getMessage());
 		}
 
 		// UDF with no brackets:
@@ -1059,7 +1176,16 @@ public class TestConfigurableServiceConnection {
 			fail("This MUST have failed because one UDFs list item has no brackets!");
 		}catch(Exception e){
 			assertEquals(TAPException.class, e.getClass());
-			assertEquals("Wrong UDF declaration syntax: unexpected character at position 1 in the property " + KEY_UDFS + ": \"t\"! A UDF declaration must have one of the following syntaxes: \"[signature]\" or \"[signature,{className}]\".", e.getMessage());
+			assertEquals("Wrong UDF declaration syntax: \"toto(a string)->VARCHAR\"! (position in the property " + KEY_UDFS + ": 1-24)", e.getMessage());
+		}
+
+		// UDF with a badly formatted description:
+		try{
+			new ConfigurableServiceConnection(udfsWithWrongDescriptionFormatProp);
+			fail("This MUST have failed because one UDFs list item has too many parameters!");
+		}catch(Exception e){
+			assertEquals(TAPException.class, e.getClass());
+			assertEquals("Wrong UDF declaration syntax: \"[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}, Blabla]\"! (position in the property " + KEY_UDFS + ": 1-67)", e.getMessage());
 		}
 
 		// UDFs whose one item have more parts than supported:
@@ -1068,7 +1194,7 @@ public class TestConfigurableServiceConnection {
 			fail("This MUST have failed because one UDFs list item has too many parameters!");
 		}catch(Exception e){
 			assertEquals(TAPException.class, e.getClass());
-			assertEquals("Wrong UDF declaration syntax: only two items (signature and class name) can be given within brackets. (position in the property " + KEY_UDFS + ": 58)", e.getMessage());
+			assertEquals("Wrong UDF declaration syntax: \"[toto(a string)->VARCHAR, {adql.db.TestDBChecker$UDFToto}, \"Blabla\", foo]\"! (position in the property " + KEY_UDFS + ": 1-74)", e.getMessage());
 		}
 
 		// UDF with missing definition part (or wrong since there is no comma):
@@ -1113,7 +1239,7 @@ public class TestConfigurableServiceConnection {
 			fail("This MUST have failed because one UDFs list item has no closing bracket!");
 		}catch(Exception e){
 			assertEquals(TAPException.class, e.getClass());
-			assertEquals("Wrong UDF declaration syntax: missing closing bracket at position 24!", e.getMessage());
+			assertEquals("Wrong UDF declaration syntax: \"[toto(a string)->VARCHAR\"! (position in the property " + KEY_UDFS + ": 1-25)", e.getMessage());
 		}
 
 		// Valid custom TAPFactory:
@@ -1198,7 +1324,7 @@ public class TestConfigurableServiceConnection {
 
 	/**
 	 * A UWSFileManager to test the load of a UWSFileManager from the configuration file with a class path.
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 01/2015
 	 * @see TestConfigurableServiceConnection#testDefaultServiceConnectionProperties()
@@ -1212,7 +1338,7 @@ public class TestConfigurableServiceConnection {
 	/**
 	 * A UserIdentifier which always return the same user...that's to say, all users are in a way still anonymous :-)
 	 * This class is only for test purpose.
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 02/2015
 	 */
@@ -1227,7 +1353,7 @@ public class TestConfigurableServiceConnection {
 		}
 
 		@Override
-		public JobOwner restoreUser(String id, String pseudo, Map<String,Object> otherData) throws UWSException{
+		public JobOwner restoreUser(String id, String pseudo, Map<String, Object> otherData) throws UWSException{
 			return everybody;
 		}
 
@@ -1235,7 +1361,7 @@ public class TestConfigurableServiceConnection {
 
 	/**
 	 * TAPFactory just to test whether the property tap_factory works well.
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 03/2017
 	 */
@@ -1254,13 +1380,15 @@ public class TestConfigurableServiceConnection {
 		}
 
 		@Override
-		public void freeConnection(final DBConnection conn){}
+		public void freeConnection(final DBConnection conn){
+		}
 
 		@Override
 		public void destroy(){
 			try{
 				dbConn.getInnerConnection().close();
-			}catch(Exception ex){}
+			}catch(Exception ex){
+			}
 		}
 
 	}
@@ -1268,7 +1396,7 @@ public class TestConfigurableServiceConnection {
 	/**
 	 * ConfigurableTAPFactory just to test whether the property tap_factory allows TAPFactory
 	 * with a constructor (ServiceConnection, Properties).
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 03/2017
 	 */
@@ -1287,20 +1415,22 @@ public class TestConfigurableServiceConnection {
 		}
 
 		@Override
-		public void freeConnection(final DBConnection conn){}
+		public void freeConnection(final DBConnection conn){
+		}
 
 		@Override
 		public void destroy(){
 			try{
 				dbConn.getInnerConnection().close();
-			}catch(Exception ex){}
+			}catch(Exception ex){
+			}
 		}
 
 	}
 
 	/**
 	 * TAPFactory just to test whether the property tap_factory is rejected when no constructor with a single parameter of type ServiceConnection exists.
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 02/2015
 	 */
@@ -1316,17 +1446,19 @@ public class TestConfigurableServiceConnection {
 		}
 
 		@Override
-		public void freeConnection(final DBConnection conn){}
+		public void freeConnection(final DBConnection conn){
+		}
 
 		@Override
-		public void destroy(){}
+		public void destroy(){
+		}
 
 	}
 
 	/**
 	 * TAPMetadata extension just to test whether it is possible to customize the output class of ConfigurableServiceConnection with the
 	 * metadata fetching methods "db" and "xml".
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 08/2015
 	 */
@@ -1341,9 +1473,9 @@ public class TestConfigurableServiceConnection {
 	/**
 	 * TAPMetadata extension just to test whether it is possible to customize the output class of ConfigurableServiceConnection with the
 	 * metadata fetching methods "db" and "xml".
-	 * 
+	 *
 	 * <strong>This extension is however bad because it does not have any of the required constructor.</strong>
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 08/2015
 	 */
@@ -1355,12 +1487,12 @@ public class TestConfigurableServiceConnection {
 
 	/**
 	 * Custom TAPLog implementation.
-	 * 
+	 *
 	 * <p><i>
 	 * 	Actually, for quick implementation, this class just extends
 	 * 	{@link DefaultTAPLog} (and so, implements TAPLog).
 	 * </i></p>
-	 * 
+	 *
 	 * @author Gr&eacute;gory Mantelet (ARI)
 	 * @version 09/2017
 	 */
