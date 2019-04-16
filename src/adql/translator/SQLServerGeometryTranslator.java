@@ -20,11 +20,14 @@ package adql.translator;
  */
 
 import adql.db.DBType;
+import adql.db.STCS;
 import adql.db.STCS.Region;
 import adql.parser.ParseException;
 import adql.query.operand.ADQLColumn;
 import adql.query.operand.ADQLOperand;
 import adql.query.operand.function.geometry.*;
+import com.microsoft.sqlserver.jdbc.Geography;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
 
 /**
  * Class that implements the translation of ADQL spatial functions
@@ -39,6 +42,7 @@ import adql.query.operand.function.geometry.*;
  */
 public class SQLServerGeometryTranslator extends SQLServerTranslator {
 
+	public static int srid = 104001;
 	/**
 	 * the precision used in the str function to convert coordinate values: if this is not
 	 * specified, they are rounded to integers
@@ -199,14 +203,58 @@ public class SQLServerGeometryTranslator extends SQLServerTranslator {
 		return buf.toString();
 	}
 
+	private static String regionToWKT(final Region region) throws TranslationException {
+		if (region.type == STCS.RegionType.POLYGON) {
+			StringBuffer buf = new StringBuffer("POLYGON((");
+			for (int i = 0; i < region.coordinates.length; i++) {
+				buf.append(180 - region.coordinates[i][0]);
+				buf.append(" ");
+				buf.append(region.coordinates[i][1]);
+				buf.append(",");
+			}
+
+			/* In SQLServer the polygon has to be closed, so we add the first point again */
+			buf.append(180 - region.coordinates[0][0]);
+			buf.append(" ");
+			buf.append(region.coordinates[0][1]);
+			buf.append("))");
+			return buf.toString();
+		}
+		return null;
+	}
+
 	@Override
 	public String translate(final RegionFunction region) throws TranslationException {
 		throw new TranslationException("REGION is currently not implemented");
 	}
 
+    public static final STCS.CoordSys coordSys = new STCS.CoordSys(STCS.Frame.J2000, null, null);
+
 	@Override
 	public Region translateGeometryFromDB(final Object jdbcColValue) throws ParseException {
 		return CLRToRegionParser.parseRegion((byte[]) jdbcColValue);
+	}
+
+	@Override
+	public Object translateGeometryToDB(final Region region) throws ParseException {
+		try {
+			if (region.type == STCS.RegionType.POSITION) {
+				byte[] wkb = Geography.point(region.coordinates[0][1], 180-region.coordinates[0][0], 104001).serialize();
+				wkb[5] = (byte) 12;
+				return wkb;
+			} else if (region.type == STCS.RegionType.POLYGON) {
+				String wkt = regionToWKT(region);
+				byte[] wkb = Geography.STGeomFromText(wkt, srid).serialize();
+				wkb[5] = (byte) 4;
+				return wkb;
+			} else if (region.type == STCS.RegionType.UNION) {
+				throw new ParseException("Unsupported Region " + region.type);
+			}
+		} catch (SQLServerException|TranslationException e) {
+			throw new ParseException(e.getMessage());
+		}
+
+        throw new ParseException("Unsupported Region " + region.type);
 	}
 
 	@Override
@@ -216,4 +264,12 @@ public class SQLServerGeometryTranslator extends SQLServerTranslator {
 		else
 			return super.convertTypeFromDB(dbmsType, rawDbmsTypeName, dbmsTypeName, params);
 	}
+
+    @Override
+    public String convertTypeToDB(DBType type) {
+	    if (type.type == DBType.DBDatatype.POINT || type.type == DBType.DBDatatype.REGION)
+            return "geography";
+	    else
+            return super.convertTypeToDB(type);
+    }
 }

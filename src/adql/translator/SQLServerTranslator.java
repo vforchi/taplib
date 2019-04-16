@@ -20,8 +20,6 @@ package adql.translator;
  *                       UDS/Centre de Données astronomiques de Strasbourg (CDS)
  */
 
-import java.util.Iterator;
-
 import adql.db.DBColumn;
 import adql.db.DBType;
 import adql.db.DBType.DBDatatype;
@@ -42,9 +40,7 @@ import adql.query.operand.Concatenation;
 import adql.query.operand.function.MathFunction;
 import adql.query.operand.function.geometry.*;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * MS SQL Server translator.
@@ -439,18 +435,23 @@ public class SQLServerTranslator extends JDBCTranslator {
 	@Override
 	public String convertTypeToDB(final DBType type){
 		if (type == null)
-			return "varchar";
+			return "varchar(256)";
 
 		switch(type.type){
 
 			case SMALLINT:
 			case REAL:
 			case BIGINT:
-			case CHAR:
-			case VARCHAR:
 			case BINARY:
 			case VARBINARY:
 				return type.type.toString().toLowerCase();
+
+			case CHAR:
+			case VARCHAR:
+				if (type.length != -1)
+					return "varchar(" + type.length + ")";
+				else
+					return "varchar(256)";
 
 			case INTEGER:
 				return "int";
@@ -471,7 +472,7 @@ public class SQLServerTranslator extends JDBCTranslator {
 			case POINT:
 			case REGION:
 			default:
-				return "varchar";
+				return "varchar(256)";
 		}
 	}
 
