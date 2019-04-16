@@ -29,6 +29,9 @@ import adql.query.operand.function.geometry.*;
 import com.microsoft.sqlserver.jdbc.Geography;
 import com.microsoft.sqlserver.jdbc.SQLServerException;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 /**
  * Class that implements the translation of ADQL spatial functions
  * into SQL specific to MS SQL Server.
@@ -203,7 +206,7 @@ public class SQLServerGeometryTranslator extends SQLServerTranslator {
 		return buf.toString();
 	}
 
-	private static String regionToWKT(final Region region) throws TranslationException {
+	private static String regionToWKT(final Region region) {
 		if (region.type == STCS.RegionType.POLYGON) {
 			StringBuffer buf = new StringBuffer("POLYGON((");
 			for (int i = 0; i < region.coordinates.length; i++) {
@@ -219,6 +222,15 @@ public class SQLServerGeometryTranslator extends SQLServerTranslator {
 			buf.append(region.coordinates[0][1]);
 			buf.append("))");
 			return buf.toString();
+		} else if (region.type == STCS.RegionType.UNION) {
+			StringBuffer wkt = new StringBuffer("GEOMETRYCOLLECTION(");
+			wkt.append(
+					Arrays.stream(region.regions)
+							.map(SQLServerGeometryTranslator::regionToWKT)
+							.collect(Collectors.joining(","))
+			);
+			wkt.append(")");
+			return wkt.toString();
 		}
 		return null;
 	}
@@ -242,15 +254,13 @@ public class SQLServerGeometryTranslator extends SQLServerTranslator {
 				byte[] wkb = Geography.point(region.coordinates[0][1], 180-region.coordinates[0][0], 104001).serialize();
 				wkb[5] = (byte) 12;
 				return wkb;
-			} else if (region.type == STCS.RegionType.POLYGON) {
+			} else if (region.type == STCS.RegionType.POLYGON || region.type == STCS.RegionType.UNION) {
 				String wkt = regionToWKT(region);
 				byte[] wkb = Geography.STGeomFromText(wkt, srid).serialize();
 				wkb[5] = (byte) 4;
 				return wkb;
-			} else if (region.type == STCS.RegionType.UNION) {
-				throw new ParseException("Unsupported Region " + region.type);
 			}
-		} catch (SQLServerException|TranslationException e) {
+		} catch (SQLServerException e) {
 			throw new ParseException(e.getMessage());
 		}
 
