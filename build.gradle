@@ -17,6 +17,12 @@ dependencies {
     compile 'commons-fileupload:commons-fileupload:1.3.3'
     compile 'org.json:json:20180813'
 
+    // JAX-B dependencies for JDK 9+
+    implementation "javax.xml.bind:jaxb-api:2.2.11"
+    implementation "com.sun.xml.bind:jaxb-core:2.2.11"
+    implementation "com.sun.xml.bind:jaxb-impl:2.2.11"
+    implementation "javax.activation:activation:1.1.1"
+
     testCompile 'junit:junit:4.12'
     testCompile 'com.h2database:h2:1.4.193'
     testCompile fileTree(dir: 'lib', include: 'astroh2-0.3.jar')
