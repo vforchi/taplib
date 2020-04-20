@@ -98,7 +98,7 @@ public class GeographyToRegionAdapter extends Geography {
         int lastFirstPoint = numberOfPoints;
         for (int reg = numberOfFigures-1; reg >=0; reg--) {
             int firstPoint = figures[reg].getPointOffset();
-            int lastPoint = Math.max(numberOfPoints, lastFirstPoint);
+            int lastPoint = Math.min(numberOfPoints, lastFirstPoint);
             lastFirstPoint = firstPoint;
             regions[reg] = new Region(coordSys, getPoints(firstPoint, lastPoint));
             if (figures[reg].getFiguresAttribute() == (byte) 0) {
