@@ -244,7 +244,11 @@ public class SQLServerGeometryTranslator extends SQLServerTranslator {
 
 	@Override
 	public Region translateGeometryFromDB(final Object jdbcColValue) throws ParseException {
-		return CLRToRegionParser.parseRegion((byte[]) jdbcColValue);
+		try {
+			return new GeographyToRegionAdapter((byte[]) jdbcColValue).toRegion();
+		} catch (Exception e) {
+			throw new ParseException(e.getMessage());
+		}
 	}
 
 	@Override
