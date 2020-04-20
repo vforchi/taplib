@@ -21,6 +21,7 @@ package adql.translator;
 
 import adql.db.STCS;
 import adql.db.STCS.Region;
+import adql.parser.ParseException;
 import com.microsoft.sqlserver.jdbc.Geography;
 import com.microsoft.sqlserver.jdbc.SQLServerException;
 
